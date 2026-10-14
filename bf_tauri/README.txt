@@ -4,7 +4,7 @@ Eigenstaendige App ohne Server, Python oder Decoder: die Auswertung laeuft kompl
 
 Bauen ueber GitHub: Inhalt dieses Ordners per git pushen (der versteckte Ordner .github muss mit).
  - Jeder Push auf main baut beide Systeme (Actions > "Build Windows + macOS", Artifacts).
- - Ein Release entsteht beim Setzen eines Tags:   git tag v1.3.0 ; git push origin v1.3.0
+ - Ein Release entsteht beim Setzen eines Tags:   git tag v1.6.0 ; git push origin v1.6.0
    Dateien im Release: BFLogAnalyzer-portable.exe, BFLogAnalyzer-Setup.exe (Windows), BFLogAnalyzer-macOS.dmg (Mac), BFLogAnalyzer.apk (Android)
 
 macOS-Hinweis: die App ist nicht von Apple notarisiert. Nach dem Herunterladen im Terminal einmal ausfuehren:

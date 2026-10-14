@@ -5,8 +5,8 @@
   var SL = { warn: 'Handlungsbedarf', hint: 'Hinweis', ok: 'In Ordnung', info: 'Info' };
   var RANK = { warn: 0, hint: 1, ok: 2, info: 3 };
   var SEVO = { warn: 0, hint: 1, info: 2, ok: 3 };
-  var AREAS = ['Heck', 'Governor', 'Antrieb', 'Akku', 'ESC', 'Servos', 'Hover', 'Vibration', 'Signal'];
-  var PRIO = ['Heck', 'Governor', 'Antrieb', 'ESC/Telemetrie', 'Akku', 'ESC', 'Servos', 'Hover', 'Vibration', 'Signal', 'Log'];
+  var AREAS = ['Regelung', 'Propwash', 'Motoren', 'Akku', 'Vibration', 'Filter', 'Ruhephasen', 'Signal'];
+  var PRIO = ['Signal', 'Motoren', 'Akku', 'Regelung', 'Propwash', 'Vibration', 'Filter', 'Ruhephasen', 'Log'];
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function nn(v) { return v === null || v === undefined || v !== v; }
   function fnum(v, d, suf) { return nn(v) ? '-' : v.toFixed(d) + (suf || ''); }
@@ -43,39 +43,51 @@
     return s.length ? s.sort(function (a, b) { return RANK[a] - RANK[b]; })[0] : 'none';
   }
   function kpis(m) {
-    var mo = m.mot, items = [
-      ['Flugzeit', m.flight_s.toFixed(0) + ' s', 'Ziel ' + m.target.toFixed(0) + ' U/min'],
-      m.hasElec ? ['Min. Spannung', m.v_min.toFixed(1) + ' V', m.v_min_cell.toFixed(2) + ' V/Zelle &middot; ' + m.cells + 'S'] : ['Min. Spannung', '&ndash;', 'nicht geloggt'],
-      m.hasElec ? ['Verbrauch', m.mah.toFixed(0) + ' mAh', m.wh.toFixed(0) + ' Wh'] : ['Verbrauch', '&ndash;', 'nicht geloggt'],
-      m.hasElec ? ['Spitzenstrom', m.i_peak.toFixed(0) + ' A', (m.p_peak / 1000).toFixed(1) + ' kW Spitze'] : ['Spitzenstrom', '&ndash;', 'nicht geloggt'],
-      ['Antriebsreserve', mo ? mo.reserve.toFixed(0) + ' %' : '&ndash;', mo ? 'Ausgang &oslash; ' + mo.mean.toFixed(0) + ' %' : 'kein Gas-Wert'],
-      ['ESC max.', nn(m.t_esc_max) ? '&ndash;' : m.t_esc_max.toFixed(0) + ' &deg;C', nn(m.t_esc_max) ? 'nicht geloggt' : 'Start ' + m.t_esc_start.toFixed(0) + ' &deg;C']];
+    var mo = m.mot, st = m.step && m.step.ok ? m.step.ax.filter(function (x) { return x.ok; }) : [], over = st.length ? Math.max.apply(null, st.map(function (x) { return x.over; })) : NaN;
+    var items = [
+      ['Flugzeit', m.flight_s.toFixed(0) + ' s', m.fw.str || 'Firmware unbekannt'],
+      m.hasVolt ? ['Min. Spannung', m.v_min.toFixed(1) + ' V', m.v_min_cell.toFixed(2) + ' V/Zelle &middot; ' + m.cells + 'S'] : ['Min. Spannung', '&ndash;', 'nicht geloggt'],
+      m.hasCurr ? ['Verbrauch', m.mah.toFixed(0) + ' mAh', m.wh.toFixed(1) + ' Wh'] : ['Verbrauch', '&ndash;', 'kein Strom geloggt'],
+      m.hasCurr ? ['Spitzenstrom', m.i_peak.toFixed(0) + ' A', m.p_peak.toFixed(0) + ' W Spitze'] : ['Spitzenstrom', '&ndash;', 'kein Strom geloggt'],
+      ['Motor-Saettigung', mo ? mo.sat_pct.toFixed(1) + ' %' : '&ndash;', mo ? 'Schwebe bei ' + fnum(m.hover_mot, 0, ' %') : 'keine Motorwerte'],
+      ['Ueberschwingen', nn(over) ? '&ndash;' : Math.max(0, over).toFixed(0) + ' %', nn(over) ? 'zu wenig Stickbewegung' : 'max. der Achsen (Sprungantwort)']];
     return '<div class="kpis">' + items.map(function (a) { return '<div class="kpi"><b>' + a[0] + '</b><span>' + a[1] + '</span><small>' + a[2] + '</small></div>'; }).join('') + '</div>';
   }
   function pidHtml(R) {
-    if (!R.length) return '<div class="find ok"><span class="badge b-ok">In Ordnung</span><b>PID &amp; Filter</b><p>Keine konkreten Messhinweise auf PID- oder Filter-Probleme. Tracking, Governor und Spektrum sehen unauffaellig aus.</p></div>';
+    if (!R.length) return '<div class="find ok"><span class="badge b-ok">In Ordnung</span><b>PID &amp; Filter</b><p>Keine konkreten Messhinweise auf PID- oder Filter-Probleme. Sprungantwort, Propwash und Spektrum sehen unauffaellig aus.</p></div>';
     return R.map(function (r) {
-      var cli = r.cli && r.cli.length ? '<div class="todo"><b>CLI-Befehle (Rotorflight Configurator &rarr; CLI):</b><pre style="margin:6px 0 0;font-size:12px;background:#1e293b;color:#e2e8f0;padding:8px 12px;border-radius:6px;overflow-x:auto">' + esc(r.cli.join('\n')) + '</pre><span class="small">Einen Wert pro Flug aendern, danach erneut fliegen und vergleichen.</span></div>' : '';
+      var cli = r.cli && r.cli.length ? '<div class="todo"><b>CLI-Befehle (Betaflight Configurator &rarr; CLI, danach <code>save</code>):</b><pre style="margin:6px 0 0;font-size:12px;background:#1e293b;color:#e2e8f0;padding:8px 12px;border-radius:6px;overflow-x:auto">' + esc(r.cli.join('\n')) + '</pre><span class="small">Einen Wert pro Flug aendern, danach erneut fliegen und vergleichen.</span></div>' : '';
       if (r.note) cli += '<div class="todo"><b>Hinweis:</b> ' + esc(r.note) + '</div>';
       return '<div class="find hint"><span class="badge b-hint">Empfehlung</span><b>' + esc(r.area) + ': ' + esc(r.title) + '</b><p>' + esc(r.obs) + '</p>' + cli + '</div>';
     }).join('');
   }
   function settingsTable(h) {
-    var keys = ['Craft name', 'Firmware revision', 'Board name', 'govPID', 'rollPID', 'pitchPID', 'yawPID', 'yaw_stop_gain', 'yawBW', 'levelPID', 'rc_rates', 'rc_expo', 'motor_pwm_protocol', 'dshot_bidir'];
+    var keys = ['Firmware revision', 'Board information', 'Craft name', 'looptime', 'pid_process_denom', 'P interval', 'rollPID', 'pitchPID', 'yawPID', 'd_min', 'd_max', 'ff_weight', 'feedforward_weight', 'iterm_relax_cutoff', 'anti_gravity_gain', 'tpa_rate', 'tpa_breakpoint',
+      'rates_type', 'rc_rates', 'rc_expo', 'rates', 'rcRate', 'rcExpo',
+      'gyro_lpf1_static_hz', 'gyro_lpf1_dyn_hz', 'gyro_lpf2_static_hz', 'gyro_lowpass_hz', 'gyro_lowpass_dyn_hz', 'gyro_lowpass2_hz', 'gyro_notch_hz', 'dterm_lpf1_static_hz', 'dterm_lpf1_dyn_hz', 'dterm_lpf2_static_hz', 'dterm_lowpass_hz', 'dterm_lowpass_dyn_hz', 'dterm_lowpass2_hz',
+      'dyn_notch_count', 'dyn_notch_q', 'dyn_notch_min_hz', 'dyn_notch_max_hz', 'dyn_notch_width_percent', 'rpm_filter_harmonics', 'rpm_filter_q', 'rpm_filter_min_hz', 'gyro_rpm_notch_harmonics', 'gyro_rpm_notch_q', 'gyro_rpm_notch_min',
+      'motor_pwm_protocol', 'dshot_bidir', 'motor_poles', 'dshot_idle_value', 'dyn_idle_min_rpm', 'motorOutput', 'debug_mode'];
     var rows = keys.filter(function (k) { return k in h; }).map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + esc(h[k]) + '</td></tr>'; }).join('');
-    return '<table>' + rows + '</table><div class="small">PID-Reihenfolge laut Rotorflight: P, I, D, F, B (Governor: P, I, D, F, Gesamt-Gain).</div>';
+    return '<table>' + rows + '</table><div class="small">PID-Werte je Achse: P, I, D (bei Betaflight 4.x ist D der Hoechstwert, d_min der Grundwert). Feedforward und d_min: Roll, Nick, Gier.</div>';
   }
   function detailTable(m) {
-    var r = [['Flugphase (Drehzahl erreicht bis Gaskappung)', m.flight_s.toFixed(0) + ' s'],
-      ['Zieldrehzahl', m.target.toFixed(0) + ' (' + (m.target_fixed ? 'fest' : 'variabel') + ')'],
-      ['Hochlauf auf 95 %', fnum(m.spool_up_s, 1, ' s')], ['Auslauf bis < 50 U/min', fnum(m.spool_down_s, 1, ' s')],
-      ['Strom Mittel / Spitze', !m.hasElec ? 'nicht geloggt' : m.i_mean.toFixed(0) + ' / ' + m.i_peak.toFixed(0) + ' A'],
-      ['Leistung Mittel / Spitze', !m.hasElec ? 'nicht geloggt' : m.p_mean.toFixed(0) + ' / ' + m.p_peak.toFixed(0) + ' W'],
-      ['Verbrauch', !m.hasElec ? 'nicht geloggt' : m.mah.toFixed(0) + ' mAh / ' + m.wh.toFixed(0) + ' Wh'],
-      ['Spannung Start / Minimum / Ruhe nach Landung', !m.hasElec ? 'nicht geloggt' : m.v_start.toFixed(2) + ' V (' + (m.v_start / m.cells).toFixed(2) + ' V/Zelle) / ' + m.v_min.toFixed(2) + ' V (' + m.v_min_cell.toFixed(2) + ' V/Zelle) / ' + fnum(m.v_rest_cell, 2) + ' V/Zelle Ruhe'],
-      ['ESC-Temperatur Start / Max', nn(m.t_esc_max) ? 'nicht geloggt' : m.t_esc_start.toFixed(0) + ' / ' + m.t_esc_max.toFixed(0) + ' C'],
-      ['Stick-Aktivitaet Roll/Nick/Gier (mittl. |Auslenkung|)', m.stick_activity.toFixed(1) + ' (Skala 0-500)']];
-    Object.keys(m.track).forEach(function (lab) { var t = m.track[lab]; r.push(['Regelabweichung ' + lab + ' (Soll>150 deg/s)', 'Median ' + t[0].toFixed(0) + ', 95 % ' + t[1].toFixed(0) + ' deg/s (' + t[2] + ' Samples)']); });
+    var mo = m.mot, r = [['Flugphase (Motoren ueber Leerlauf)', m.flight_s.toFixed(0) + ' s von ' + m.log_s.toFixed(0) + ' s Log'],
+      ['Lograte', m.fs.toFixed(0) + ' Hz (Frequenzen bis ' + (m.fs / 2).toFixed(0) + ' Hz sichtbar)'],
+      ['Gasstick Mittel / Schwebe', m.thr_mean.toFixed(0) + ' % / ' + fnum(m.hover_thr, 0, ' %')],
+      ['Motoren Mittel / Spitze', mo ? mo.mean.toFixed(0) + ' / ' + mo.peak.toFixed(0) + ' %' : '-'],
+      ['Motoren am Anschlag / am Leerlauf', mo ? mo.sat_pct.toFixed(2) + ' % / ' + mo.idle_pct.toFixed(2) + ' %' : '-'],
+      ['Motoren im ruhigen Flug', mo ? mo.per.map(function (x, k) { return 'M' + (k + 1) + ' ' + fnum(x, 1); }).join(', ') + ' %' : '-'],
+      ['Motorfrequenz Median / Max (eRPM)', mo && mo.rpm ? mo.rpm.hz_med.toFixed(0) + ' / ' + mo.rpm.hz_max.toFixed(0) + ' Hz (' + mo.rpm.poles + ' Pole)' : 'nicht geloggt'],
+      ['Strom Mittel / Spitze', !m.hasCurr ? 'nicht geloggt' : m.i_mean.toFixed(1) + ' / ' + m.i_peak.toFixed(0) + ' A'],
+      ['Leistung Mittel / Spitze', !m.hasCurr ? 'nicht geloggt' : m.p_mean.toFixed(0) + ' / ' + m.p_peak.toFixed(0) + ' W'],
+      ['Verbrauch', !m.hasCurr ? 'nicht geloggt' : m.mah.toFixed(0) + ' mAh / ' + m.wh.toFixed(1) + ' Wh'],
+      ['Spannung Start / Minimum / nach Landung', !m.hasVolt ? 'nicht geloggt' : m.v_start.toFixed(2) + ' V (' + (m.v_start / m.cells).toFixed(2) + ' V/Zelle) / ' + m.v_min.toFixed(2) + ' V (' + m.v_min_cell.toFixed(2) + ' V/Zelle) / ' + fnum(m.v_rest_cell, 2) + ' V/Zelle'],
+      ['Stick-Aktivitaet Roll/Nick/Gier (mittl. |Auslenkung|)', m.stick_activity.toFixed(1) + ' (Skala 0-500)'],
+      ['Ungefiltertes Gyro', m.rawSrc || 'nicht geloggt']];
+    Object.keys(m.track).forEach(function (lab) { var t = m.track[lab]; r.push(['Regelabweichung ' + lab + ' (Soll > 100 deg/s)', 'Median ' + t[0].toFixed(0) + ', 95 % ' + t[1].toFixed(0) + ' deg/s (' + t[2] + ' Samples)']); });
+    if (m.step && m.step.ok) m.step.ax.forEach(function (a, k) { if (a.ok) r.push(['Sprungantwort ' + ['Roll', 'Nick', 'Gier'][k], 'Ueberschwingen ' + Math.max(0, a.over).toFixed(0) + ' %, t50 ' + a.t50.toFixed(0) + ' ms, t90 ' + fnum(a.t90, 0) + ' ms, Endwert ' + a.ss.toFixed(2) + ' (' + a.n + ' Fenster)']); });
+    if (m.pw && m.pw.ok && m.pw.n) r.push(['Propwash typisch / 90 % / Ruhe', m.pw.med.toFixed(1) + ' / ' + m.pw.p90.toFixed(1) + ' / ' + fnum(m.pw.base, 1) + ' deg/s (' + m.pw.n + ' Gas-Ruecknahmen)']);
+    if (m.rssi) r.push(['RSSI Minimum / Median', m.rssi.min.toFixed(0) + ' / ' + m.rssi.med.toFixed(0) + ' %']);
     return '<table>' + r.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</table>';
   }
 
@@ -87,10 +99,10 @@
     if (V.peaks.length) {
       h += '<h3>Gefundene Spitzen</h3><table><tr><th>Frequenz</th><th>Zuordnung</th><th>Achse</th>' + (V.hasRaw ? '<th>roh</th>' : '') + '<th>gefiltert</th>' + (V.hasRaw ? '<th>D&auml;mpfung</th>' : '') + '</tr>';
       V.peaks.forEach(function (p) {
-        h += '<tr><td>' + p.f.toFixed(1) + ' Hz</td><td>' + (p.n ? p.n + 'P Hauptrotor' : 'fest / unbekannt') + '</td><td>' + ['Roll', 'Nick', 'Gier'].filter(function (a, i) { return p.axes[i]; }).join('/') + '</td>' +
+        h += '<tr><td>' + p.f.toFixed(1) + ' Hz</td><td>' + (p.low ? 'Regelkreis (&lt; 40 Hz)' : p.mot ? 'Motorfrequenz' : p.fixed === true ? 'feste Resonanz' : p.fixed === false ? 'drehzahlabh&auml;ngig' : 'unklar') + '</td><td>' + ['Roll', 'Nick', 'Gier'].filter(function (a, i) { return p.axes[i]; }).join('/') + '</td>' +
           (V.hasRaw ? '<td>' + p.ampR.toFixed(1) + '</td>' : '') + '<td>' + p.ampA.toFixed(1) + '</td>' + (V.hasRaw ? '<td>' + p.att.toFixed(0) + ' dB</td>' : '') + '</tr>';
       });
-      h += '</table><div class="small">Amplituden in deg/s. Kopfdrehzahl ' + V.hs.toFixed(0) + ' U/min = ' + V.fh.toFixed(1) + ' Hz (1P). Spektrum aus ' + V.nWin + ' Fenstern mit stabiler Drehzahl, Aufl&ouml;sung ' + V.df.toFixed(2) + ' Hz.</div>';
+      h += '</table><div class="small">Amplituden in deg/s. Spektrum aus ' + V.nWin + ' Fenstern &uuml;ber den ganzen Flug, Aufl&ouml;sung ' + V.df.toFixed(1) + ' Hz.' + (V.rawSrc ? ' Rohsignal: ' + esc(V.rawSrc) + '.' : '') + '</div>';
     }
     return h;
   }
@@ -100,22 +112,21 @@
     if (!m.ok) return [{ title: 'Info', sev: 'info', html: '<div class="find info">' + esc(m.error || '') + '</div>', figs: [] }];
     var F = it.F, R = it.R, P = it.P, Fg = Figures, tabs = [];
     function add(title, sev, html, figs) { tabs.push({ title: title, sev: sev, html: html, figs: figs || [] }); }
-    var sub = '<div class="sub">Flugphase ' + m.flight_s.toFixed(0) + ' s | Ziel ' + m.target.toFixed(0) + ' U/min (' + (m.target_fixed ? 'fest' : 'variabel') + ')' + (m.hasElec ? ' | ' + m.mah.toFixed(0) + ' mAh' : '') + '</div>';
+    var sub = '<div class="sub">' + esc(m.fw.str || '') + (m.hdr['Craft name'] ? ' | ' + esc(m.hdr['Craft name']) : '') + ' | Flugphase ' + m.flight_s.toFixed(0) + ' s | Lograte ' + m.fs.toFixed(0) + ' Hz' + (m.hasCurr ? ' | ' + m.mah.toFixed(0) + ' mAh' : '') + '</div>';
     var f = function (fn) { return function (el) { fn(el, m, P); }; };
-    add('Übersicht', it.sev, sub + kpis(m) + fazitHtml(F) + '<div class="cards">' + cardsFor(F) + '</div><div class="figs"></div><h3>Signal / Telemetrie</h3>' + block(F, ['Signal', 'Log']), [f(Fg.overview)]);
-    add('Heck', sevOf(F, ['Heck']), block(F, ['Heck']) + '<div class="figs"></div>', [f(Fg.yaw), f(Fg.spectro)]);
-    add('Governor', sevOf(F, ['Governor', 'ESC/Telemetrie']), block(F, ['Governor', 'ESC/Telemetrie']) + (it.GR && it.GR.length ? '<h3>Governor-PID-Empfehlungen</h3>' + pidHtml(it.GR) : '') + '<div class="figs"></div>', [f(Fg.governor), f(Fg.load), f(Fg.govTerms)]);
-    add('Antrieb', sevOf(F, ['Antrieb', 'ESC']), block(F, ['Antrieb', 'ESC']) + '<div class="figs"></div>', [f(Fg.power)]);
-    if (m.hasElec) add('Akku', sevOf(F, ['Akku']), block(F, ['Akku']) + '<div class="figs"></div>', [f(Fg.battery)]);
-    add('Servos', sevOf(F, ['Servos']), block(F, ['Servos']) + '<div class="figs"></div>', [f(Fg.servos)]);
-    add('Vibration', sevOf(F, ['Hover', 'Vibration']), block(F, ['Vibration', 'Hover']) + (it.VR && it.VR.length ? '<h3>Filter-Empfehlungen</h3>' + pidHtml(it.VR) : '') + vibTable(m.vib) + '<div class="figs"></div>', [f(Fg.vibSpectrum), f(Fg.vibLevel), f(Fg.hover)]);
-    add('PID & Filter', R.length ? 'hint' : 'ok', "<p class='small'>Basierend auf den gemessenen Werten dieses Fluges. Immer nur einen Parameter pro Flug aendern.</p>" + pidHtml(R));
+    add('Übersicht', it.sev, sub + kpis(m) + fazitHtml(F) + '<div class="cards">' + cardsFor(F) + '</div><div class="figs"></div><h3>Signal / Log</h3>' + block(F, ['Signal', 'Log']), [f(Fg.overview)]);
+    add('Regelung', sevOf(F, ['Regelung', 'Ruhephasen']), block(F, ['Regelung', 'Ruhephasen']) + '<div class="figs"></div>', [f(Fg.stepResp), f(Fg.tracking), f(Fg.hover), f(Fg.spectro)]);
+    add('Propwash', sevOf(F, ['Propwash']), block(F, ['Propwash']) + (it.WR && it.WR.length ? '<h3>Empfehlungen</h3>' + pidHtml(it.WR) : '') + '<div class="figs"></div>', [f(Fg.propwash)]);
+    add('Motoren', sevOf(F, ['Motoren']), block(F, ['Motoren']) + '<div class="figs"></div>', [f(Fg.motors)]);
+    if (m.hasVolt) add('Akku', sevOf(F, ['Akku']), block(F, ['Akku']) + '<div class="figs"></div>', [f(Fg.battery)]);
+    add('Vibration', sevOf(F, ['Vibration', 'Filter']), block(F, ['Vibration', 'Filter']) + (it.VR && it.VR.length ? '<h3>Filter-Empfehlungen</h3>' + pidHtml(it.VR) : '') + vibTable(m.vib) + '<div class="figs"></div>', [f(Fg.vibSpectrum), f(Fg.thrMap), f(Fg.vibLevel), f(Fg.dterm)]);
+    add('PID & Filter', R.length ? 'hint' : 'ok', "<p class='small'>Basierend auf den gemessenen Werten dieses Fluges. Immer nur einen Parameter pro Flug aendern und danach erneut loggen. Vor Aenderungen im CLI <code>diff all</code> sichern.</p>" + pidHtml(R));
     add('Einstellungen', 'none', '<h3>Einstellungen aus dem Log</h3>' + settingsTable(m.hdr || {}) + '<h3>Alle Kennzahlen</h3>' + detailTable(m));
     return tabs;
   }
 
-  var DATA = null, CUR = 0, TAB = 0, TABS = null, ROTOR = window.__ROTOR__ || '', worker = null;
-  function msg(t, err, spin) { $('hero').innerHTML = ''; $('body').innerHTML = '<div id="msg" class="' + (err ? 'err' : '') + '">' + (spin ? ROTOR : '') + t + '</div>'; $('tabs').innerHTML = ''; }
+  var DATA = null, CUR = 0, TAB = 0, TABS = null, LOGO = window.__LOGO__ || '', worker = null;
+  function msg(t, err, spin) { $('hero').innerHTML = ''; $('body').innerHTML = '<div id="msg" class="' + (err ? 'err' : '') + '">' + (spin ? LOGO : '') + t + '</div>'; $('tabs').innerHTML = ''; }
   function render() {
     var it = DATA[CUR]; TABS = buildTabs(it); if (TAB >= TABS.length) TAB = 0;
     $('tabs').innerHTML = TABS.map(function (x, i) { return '<button data-i="' + i + '" class="' + (i === TAB ? 'on' : '') + '"><i class="' + x.sev + '"></i>' + esc(x.title) + '</button>'; }).join('');
@@ -154,5 +165,5 @@
   $('file').onchange = function () { if (this.files[0]) analyze(this.files[0]); };
   $('flight').onchange = function () { CUR = +this.value; TAB = 0; render(); };
   $('cells').onchange = function () { var f = $('file').files[0]; if (f && DATA) analyze(f); };
-  window.__rf = { analyze: analyze };
+  window.__bf = { analyze: analyze };
 })();

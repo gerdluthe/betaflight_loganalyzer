@@ -1,4 +1,4 @@
-/* Rotorflight/Betaflight Blackbox (BBL) Parser - Nachbau der Logik von blackbox_decode (blackbox-tools).
+/* Betaflight Blackbox (BBL) Parser - Nachbau der Logik von blackbox_decode (blackbox-tools).
    Liefert pro Log: header, names, n, cols{name: Float64Array}. Werte wie in der CSV von blackbox_decode (roh). */
 (function (root) {
   'use strict';
@@ -93,7 +93,7 @@
     var hist = [new Float64Array(nMain), new Float64Array(nMain), new Float64Array(nMain)];
     var cur = hist[0], prev = null, prev2 = null, ring = 0;
     var lastSlow = new Float64Array(Math.max(nSlow, 1)), lastIter = -1, lastTime = -1, rollover = 0;
-    var mainValid = false, lastSkipped = 0, ev = -1;
+    var mainValid = false, lastSkipped = 0, ev = -1, gpsHome = [0, 0];
     function should(fi) { return (((fi % cfg.frameIntervalI) + cfg.pNum - 1) % cfg.pDen) < cfg.pNum; }
     function skippedFrames() { if (lastIter === -1) return 0; var c = 0; for (var fi = lastIter + 1; !should(fi); fi++) c++; return c; }
     function predict(i, pr, value, frame) {
@@ -108,6 +108,7 @@
         case 3: if (prev) value += Math.trunc((prev[i] + prev2[i]) / 2); break;
         case 10: if (prev) value += prev[iTime]; break;
         case 11: value += cfg.motorOutputLow; break;
+        case 7: value += gpsHome[i & 1] || 0; break;   // GPS-Home (nur G-Frames)
         default: throw new Error('Predictor ' + pr + ' nicht unterstuetzt');
       }
       return value;
@@ -153,10 +154,11 @@
         if (t === 'I') { parseFrame('I', cur, 0); }
         else if (t === 'P') { lastSkipped = skippedFrames(); parseFrame('P', cur, lastSkipped); }
         else if (t === 'S') { if (S) parseFrame('S', lastSlow, 0); }
-        else if (t === 'G' || t === 'H') { if (defs[t]) parseFrame(t, new Float64Array(defs[t].n), 0); }
+        else if (t === 'G' || t === 'H') { if (defs[t]) { var gf = new Float64Array(defs[t].n); parseFrame(t, gf, 0); if (t === 'H') gpsHome = [gf[0], gf[1]]; } }
         else if (t === 'E') {
           var et = rb(); ev = et;
           if (et === 0) uvb(); else if (et === 13) { var f = rb(); if (f > 127) { p += 4; } else svb(); }
+          else if (et === 15) uvb(); else if (et === 30) { uvb(); uvb(); }
           else if (et === 14) { var li = uvb(), ct = uvb() + rollover; ev = { resume: [li, ct] }; }
           else if (et === 255) { if (p + 11 <= end) { var s = ''; for (var z = 0; z < 11; z++) s += String.fromCharCode(data[p + z]); p += 11; if (s === 'End of log\0') end = p; else ev = -1; } else { p = end; } }
           else ev = -1;

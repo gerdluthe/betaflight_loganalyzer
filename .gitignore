@@ -6,3 +6,4 @@ bf_tauri/src-tauri/target/
 bf_tauri/src-tauri/gen/
 *.png
 !bf_tauri/icon.png
+shots/
