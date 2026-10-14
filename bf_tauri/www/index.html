@@ -1,0 +1,2088 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0f1e">
+<title>Betaflight Log Analyzer</title><style>
+*{box-sizing:border-box}
+body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f3f4f6;color:#111827;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding:18px 24px 60px}
+header h1{margin:18px 0 2px}.sub{color:#6b7280;margin-bottom:10px}
+nav{position:sticky;top:0;z-index:20;background:#111827;padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{color:#e5e7eb;text-decoration:none;font-size:12px;padding:3px 10px;border-radius:99px;background:#374151}
+nav a:hover{background:#4b5563}nav .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+nav .sep{color:#6b7280;margin:0 4px}
+section{margin-top:26px}
+h2{margin:0 0 10px;font-size:20px;border-bottom:2px solid #d1d5db;padding-bottom:4px}
+h3{margin:22px 0 6px;font-size:15px;color:#374151;text-transform:uppercase;letter-spacing:.04em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0}
+.card{background:#fff;border-radius:10px;padding:10px 12px;border-left:6px solid #9ca3af;box-shadow:0 1px 2px #0001;font-size:13px}
+.card b{display:block;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.badge{display:inline-block;font-size:11px;padding:1px 9px;border-radius:99px;color:#fff;margin-right:6px;vertical-align:middle}
+.b-warn{background:#dc2626}.b-hint{background:#f59e0b}.b-ok{background:#16a34a}.b-info{background:#2563eb}
+.fazit{border-radius:10px;padding:12px 16px;margin:10px 0;background:#fff;border-left:8px solid #9ca3af;box-shadow:0 1px 2px #0001}
+.fazit.warn{background:#fef2f2}.fazit.hint{background:#fffbeb}.fazit.ok{background:#f0fdf4}
+.find{background:#fff;border-radius:10px;padding:10px 14px;margin:8px 0;border-left:6px solid #9ca3af;box-shadow:0 1px 2px #0001}
+.find p{margin:4px 0}.todo{background:#f3f4f6;border-radius:6px;padding:6px 10px;margin-top:6px;font-size:13px}
+figure{margin:10px 0;background:#fff;border-radius:10px;padding:8px;box-shadow:0 1px 2px #0001}
+figure img{max-width:100%;display:block;margin:0 auto}
+figcaption{font-size:12.5px;color:#4b5563;padding:6px 8px 2px}
+.card.warn,.find.warn,.fazit.warn{border-left-color:#dc2626}.card.hint,.find.hint,.fazit.hint{border-left-color:#f59e0b}
+.card.ok,.find.ok,.fazit.ok{border-left-color:#16a34a}.card.info,.find.info{border-left-color:#2563eb}
+table{border-collapse:collapse;width:100%;background:#fff;font-size:13px;border-radius:8px;overflow:hidden}
+th,td{padding:5px 8px;border-bottom:1px solid #e5e7eb;text-align:right}th:first-child,td:first-child{text-align:left}
+th{background:#f3f4f6}
+table.matrix td,table.matrix th{text-align:center;padding:4px 6px}table.matrix td:first-child{text-align:left}
+td.st{width:70px}td.st a{display:block;height:22px;border-radius:5px}
+td.st.warn a{background:#dc2626}td.st.hint a{background:#f59e0b}td.st.ok a{background:#16a34a}td.st.info a{background:#93c5fd}td.st.none a{background:#e5e7eb}
+.legend span{display:inline-block;margin-right:14px;font-size:12px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+details.flight{background:#fff;border-radius:12px;margin:14px 0;box-shadow:0 1px 3px #0002}
+details.flight>summary{cursor:pointer;font-size:17px;font-weight:600;padding:12px 16px;list-style:none}
+details.flight>summary::-webkit-details-marker{display:none}
+details.flight>summary:before{content:"\25B8  ";color:#6b7280}details.flight[open]>summary:before{content:"\25BE  "}
+details.flight>.body{padding:0 16px 16px}
+details.mini{background:#f9fafb;border-radius:8px;padding:6px 12px;margin:8px 0}details.mini summary{cursor:pointer;font-weight:600}
+.small{font-size:12px;color:#6b7280}.chg{color:#b45309;font-weight:600;text-align:left}
+@media print{nav{display:none}figure,.find,.fazit{break-inside:avoid}}
+
+:root{--bg:#0a0f1e;--panel:rgba(255,255,255,.045);--line:rgba(255,255,255,.09);--txt:#e6ebf5;--mut:#8d98b3;--acc:#60a5fa;--acc2:#a78bfa;
+--warn:#f87171;--hint:#fbbf24;--ok:#34d399;--info:#60a5fa}
+html{background:var(--bg)}
+body{background:radial-gradient(900px 520px at 10% -8%,rgba(96,165,250,.22),transparent 60%),radial-gradient(820px 520px at 100% 0,rgba(167,139,250,.20),transparent 55%),
+radial-gradient(700px 500px at 50% 110%,rgba(52,211,153,.07),transparent 60%),var(--bg);background-attachment:fixed;color:var(--txt);
+font-family:Inter,"Segoe UI",system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1180px;padding:8px 24px 70px}
+h2,h3{color:var(--txt)}h3{color:var(--mut);margin-top:30px;font-size:12px;letter-spacing:.14em}
+.sub,.small,figcaption{color:var(--mut)}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(10,15,30,.6)}
+.brand{display:flex;align-items:center;gap:12px;margin-right:12px}
+.brand h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;background:linear-gradient(90deg,#93c5fd,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand small{display:block;color:var(--mut);font-size:11px;margin-top:1px}
+.top label.l{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.top input[type=text],.top input[type=number],.top select{padding:8px 11px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--txt);outline:none;font-size:13px}
+.top input:focus,.top select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(96,165,250,.2)}
+.btn,.fbtn{padding:9px 18px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--txt);cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.fbtn:hover{background:rgba(255,255,255,.12)}
+.btn.go{border:0;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:600;box-shadow:0 6px 24px -6px rgba(99,102,241,.8)}
+.btn.go:hover{filter:brightness(1.12);transform:translateY(-1px)}.btn.go:disabled{filter:grayscale(.6);cursor:wait;transform:none}
+#tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;padding:12px 24px;flex-wrap:wrap;background:rgba(10,15,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+#tabs:empty{display:none}
+#tabs button{border:1px solid transparent;background:transparent;color:var(--mut);padding:8px 16px;border-radius:99px;cursor:pointer;font-size:13.5px;font-weight:500;transition:.15s}
+#tabs button:hover{color:var(--txt);background:rgba(255,255,255,.06)}
+#tabs button.on{color:#fff;background:linear-gradient(135deg,#3b82f6,#8b5cf6);box-shadow:0 6px 22px -6px rgba(99,102,241,.85)}
+#tabs i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:#64748b}
+#tabs i.warn{background:var(--warn);box-shadow:0 0 9px var(--warn)}#tabs i.hint{background:var(--hint);box-shadow:0 0 9px var(--hint)}
+#tabs i.ok{background:var(--ok);box-shadow:0 0 9px var(--ok)}#tabs i.info{background:var(--info);box-shadow:0 0 9px var(--info)}
+#hero{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:26px 0 4px}
+#hero h2{border:0;margin:0;font-size:24px;letter-spacing:-.02em;padding:0}
+#hero .badge{font-size:12px;padding:4px 14px}
+#body>*,.wrap>*{animation:fade .4s ease both}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0}
+.kpi{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px 14px;backdrop-filter:blur(8px)}
+.kpi:before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.kpi b{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;margin-bottom:6px}
+.kpi span{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1}.kpi small{display:block;color:var(--mut);font-size:12px;margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--line);border-left:4px solid #64748b;border-radius:14px;color:var(--txt);box-shadow:none}
+.card b{color:var(--mut)}
+.card.warn{border-left-color:var(--warn);box-shadow:0 10px 30px -14px var(--warn)}.card.hint{border-left-color:var(--hint);box-shadow:0 10px 30px -16px var(--hint)}
+.card.ok{border-left-color:var(--ok);box-shadow:0 10px 30px -18px var(--ok)}.card.info{border-left-color:var(--info)}
+.find{background:var(--panel);border:1px solid var(--line);border-left:4px solid #64748b;border-radius:16px;padding:14px 18px;margin:12px 0;backdrop-filter:blur(8px);box-shadow:none}
+.find.warn{border-left-color:var(--warn);box-shadow:0 14px 40px -20px var(--warn)}.find.hint{border-left-color:var(--hint);box-shadow:0 14px 40px -22px var(--hint)}
+.find.ok{border-left-color:var(--ok)}.find.info{border-left-color:var(--info)}
+.find b{font-size:15px}.find p{color:#c3cce0}
+.badge{font-weight:600;letter-spacing:.02em;padding:2px 11px}
+.b-warn{background:linear-gradient(135deg,#ef4444,#f87171)}.b-hint{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#1f1300}
+.b-ok{background:linear-gradient(135deg,#10b981,#34d399);color:#03241a}.b-info{background:linear-gradient(135deg,#3b82f6,#60a5fa)}
+.todo{background:rgba(255,255,255,.05);border:1px solid var(--line);color:#c3cce0;border-radius:10px}
+.fazit{background:linear-gradient(135deg,rgba(96,165,250,.10),rgba(167,139,250,.10));border:1px solid var(--line);border-left:6px solid #64748b;border-radius:16px;color:var(--txt);padding:16px 20px}
+.fazit.warn{border-left-color:var(--warn)}.fazit.hint{border-left-color:var(--hint)}.fazit.ok{border-left-color:var(--ok)}
+.fazit.warn,.fazit.hint,.fazit.ok{background:linear-gradient(135deg,rgba(96,165,250,.10),rgba(167,139,250,.10))}
+figure{background:#0e1424;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 20px 50px -28px #000}
+figure img{border-radius:10px}figcaption{font-size:12.5px;padding:10px 6px 2px}
+table{background:transparent;color:var(--txt);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th{background:rgba(255,255,255,.06);color:var(--mut);font-weight:600}th,td{border-bottom:1px solid var(--line)}
+details.mini{background:var(--panel);border:1px solid var(--line)}
+#msg{padding:70px 24px;color:var(--mut);text-align:center;font-size:15px}#msg.err{color:#fca5a5;white-space:pre-wrap;text-align:left}
+.rotor{width:150px;height:150px;display:block;margin:0 auto 14px;filter:drop-shadow(0 0 18px rgba(96,165,250,.55))}
+.mr{transform-origin:100px 100px;animation:spin .5s linear infinite}.tr{transform-origin:100px 186px;animation:spin .14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty .mr{animation-duration:7s}.empty .tr{animation-duration:2.2s}.empty .rotor{opacity:.8}
+.brand .mr{animation-duration:2.2s}.brand .tr{animation-duration:.6s}.brand svg{filter:drop-shadow(0 0 8px rgba(96,165,250,.6))}
+pre{border:1px solid var(--line)}
+
+canvas{max-width:100%}
+.figwrap{margin:14px 0}
+input,select,button{font-family:inherit}
+@media(max-width:700px){
+ .top{padding:10px 14px;gap:8px}.brand h1{font-size:16px}
+ #tabs{padding:8px 10px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+ #tabs::-webkit-scrollbar{display:none}#tabs button{white-space:nowrap;padding:8px 13px;font-size:13px}
+ .wrap{padding:6px 12px 60px}#hero h2{font-size:18px;word-break:break-all}
+ .kpis{grid-template-columns:repeat(2,1fr);gap:10px}.kpi span{font-size:23px}.kpi{padding:12px 13px}
+ figure{padding:6px;border-radius:14px}.find{padding:12px 14px}table{font-size:12px}
+ .cards{grid-template-columns:repeat(2,1fr)}
+}
+.top{padding-top:max(14px,env(safe-area-inset-top))}
+</style></head><body>
+<div class="top"><div class="brand"><svg style="width:44px;height:44px" viewBox="0 0 200 200" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient><radialGradient id="disc"><stop offset="0" stop-color="#60a5fa" stop-opacity=".02"/><stop offset=".8" stop-color="#8b5cf6" stop-opacity=".10"/><stop offset="1" stop-color="#60a5fa" stop-opacity=".28"/></radialGradient></defs><g stroke="url(#g)" stroke-width="3" stroke-linecap="round"><path d="M86 78 V122"/><path d="M114 78 V122"/><path d="M80 78 H92"/><path d="M108 78 H120"/><path d="M80 122 H92"/><path d="M108 122 H120"/></g><rect x="97.5" y="116" width="5" height="68" rx="2.5" fill="url(#g)"/><path d="M100 150 L109 176 L100 172 Z" fill="url(#g)" opacity=".8"/><ellipse cx="100" cy="98" rx="15" ry="32" fill="url(#g)"/><ellipse cx="100" cy="84" rx="8" ry="13" fill="#0e1424" opacity=".55"/><g class="tr"><rect x="98.8" y="170" width="2.4" height="30" rx="1.2" fill="#c4b5fd"/><rect x="85" y="184.8" width="30" height="2.4" rx="1.2" fill="#c4b5fd"/></g><g class="mr"><circle cx="100" cy="100" r="92" fill="url(#disc)" stroke="#8da2ff" stroke-opacity=".35" stroke-dasharray="3 6"/><rect x="8" y="96.5" width="184" height="7" rx="3.5" fill="url(#g)"/><rect x="8" y="96.5" width="26" height="7" rx="3.5" fill="#f472b6" opacity=".9"/><rect x="166" y="96.5" width="26" height="7" rx="3.5" fill="#f472b6" opacity=".9"/><circle cx="100" cy="100" r="7" fill="#e6ebf5"/><circle cx="100" cy="100" r="3" fill="#0e1424"/></g></svg><div><h1>Betaflight Log Analyzer</h1><small>Blackbox-Auswertung &middot; offline &middot; <span class="ver">v1.5.1</span></small></div></div>
+<label class="btn go" style="cursor:pointer"><input id="file" type="file" accept=".bbl,.BBL" style="display:none"><span id="fname">Log-Datei w&auml;hlen &hellip;</span></label>
+<label class="l">Zellen</label><input id="cells" type="number" min="0" max="14" value="0" style="width:60px" title="0 = automatisch">
+<select id="flight" style="display:none"></select></div>
+<div id="tabs"></div><div class="wrap"><div id="hero"></div><div id="body"><div id="msg" class="empty"><svg class="rotor" viewBox="0 0 200 200" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient><radialGradient id="disc"><stop offset="0" stop-color="#60a5fa" stop-opacity=".02"/><stop offset=".8" stop-color="#8b5cf6" stop-opacity=".10"/><stop offset="1" stop-color="#60a5fa" stop-opacity=".28"/></radialGradient></defs><g stroke="url(#g)" stroke-width="3" stroke-linecap="round"><path d="M86 78 V122"/><path d="M114 78 V122"/><path d="M80 78 H92"/><path d="M108 78 H120"/><path d="M80 122 H92"/><path d="M108 122 H120"/></g><rect x="97.5" y="116" width="5" height="68" rx="2.5" fill="url(#g)"/><path d="M100 150 L109 176 L100 172 Z" fill="url(#g)" opacity=".8"/><ellipse cx="100" cy="98" rx="15" ry="32" fill="url(#g)"/><ellipse cx="100" cy="84" rx="8" ry="13" fill="#0e1424" opacity=".55"/><g class="tr"><rect x="98.8" y="170" width="2.4" height="30" rx="1.2" fill="#c4b5fd"/><rect x="85" y="184.8" width="30" height="2.4" rx="1.2" fill="#c4b5fd"/></g><g class="mr"><circle cx="100" cy="100" r="92" fill="url(#disc)" stroke="#8da2ff" stroke-opacity=".35" stroke-dasharray="3 6"/><rect x="8" y="96.5" width="184" height="7" rx="3.5" fill="url(#g)"/><rect x="8" y="96.5" width="26" height="7" rx="3.5" fill="#f472b6" opacity=".9"/><rect x="166" y="96.5" width="26" height="7" rx="3.5" fill="#f472b6" opacity=".9"/><circle cx="100" cy="100" r="7" fill="#e6ebf5"/><circle cx="100" cy="100" r="3" fill="#0e1424"/></g></svg>Tippe oben auf &bdquo;Log-Datei w&auml;hlen&ldquo; (.bbl) &ndash; die Auswertung startet sofort. Alles l&auml;uft lokal auf dem Ger&auml;t.</div></div></div>
+<script type="text/js-worker" id="wsrc">/* Rotorflight/Betaflight Blackbox (BBL) Parser - Nachbau der Logik von blackbox_decode (blackbox-tools).
+   Liefert pro Log: header, names, n, cols{name: Float64Array}. Werte wie in der CSV von blackbox_decode (roh). */
+(function (root) {
+  'use strict';
+  var ENC = { SVB: 0, UVB: 1, NEG14: 3, ED_U: 4, ED_S: 5, T8_8SVB: 6, T2_3S32: 7, T8_4S16: 8, NUL: 9, EG_U: 10, EG_S: 11 };
+  var MAX_FRAME_LEN = 256, MAX_ITER_JUMP = 500 * 10, MAX_TIME_JUMP = 10 * 1000 * 1000;
+  var MARKERS = { 73: 'I', 80: 'P', 71: 'G', 72: 'H', 83: 'S', 69: 'E' };
+
+  function sx(v, bits) { var s = 32 - bits; return (v << s) >> s; }
+
+  function parseOne(data, start, end) {
+    var pos = start, hdr = {}, defs = {};
+    function def(t) { return defs[t] || (defs[t] = { names: [], signed: [], pred: [], enc: [], n: 0 }); }
+    function ints(s) { return s.split(',').map(function (x) { var v = parseInt(x, 10); return isNaN(v) ? 0 : v; }); }
+    // ---- Header ----
+    while (pos < end && data[pos] === 72 && data[pos + 1] === 32) {
+      var e = pos; while (e < end && data[e] !== 10) e++;
+      var line = ''; for (var i = pos + 2; i < e; i++) line += String.fromCharCode(data[i]);
+      pos = e + 1;
+      var c = line.indexOf(':'); if (c < 0) continue;
+      var k = line.slice(0, c).trim(), v = line.slice(c + 1).trim();
+      hdr[k] = v;
+      if (k.indexOf('Field ') === 0) {
+        var ft = k.charAt(6), d = def(ft);
+        if (/ name$/.test(k)) { d.names = v.split(','); d.n = d.names.length; if (ft === 'I') { def('P').names = d.names; def('P').n = d.n; } }
+        else if (/ signed$/.test(k)) { d.signed = ints(v); if (ft === 'I') def('P').signed = d.signed; }
+        else if (/ predictor$/.test(k)) d.pred = ints(v);
+        else if (/ encoding$/.test(k)) d.enc = ints(v);
+      }
+    }
+    var I = defs.I; if (!I || !I.n) throw new Error('Keine Feld-Definitionen im Log');
+    var cfg = { frameIntervalI: Math.max(1, parseInt(hdr['I interval'], 10) || 32), pNum: 1, pDen: 1,
+                dataVersion: parseInt(hdr['Data version'], 10) || 0, minthrottle: parseInt(hdr['minthrottle'], 10) || 0,
+                vbatref: parseInt(hdr['vbatref'], 10) || 0, motorOutputLow: 0 };
+    var pi = hdr['P interval']; if (pi && pi.indexOf('/') > 0) { cfg.pNum = parseInt(pi, 10); cfg.pDen = parseInt(pi.split('/')[1], 10); }
+    cfg.motorOutputLow = cfg.minthrottle;
+    if (hdr['motorOutput']) cfg.motorOutputLow = parseInt(hdr['motorOutput'].split(',')[0], 10) || 0;
+
+    var names = I.names.slice(), nMain = I.n, S = defs.S, nSlow = S ? S.n : 0;
+    var allNames = names.concat(S ? S.names : []);
+    var iTime = names.indexOf('time'), iIter = names.indexOf('loopIteration'), iMotor0 = names.indexOf('motor[0]');
+    // ---- Spaltenspeicher ----
+    var cap = 1 << 14, ncol = nMain + nSlow, cols = []; for (var q = 0; q < ncol; q++) cols.push(new Float64Array(cap));
+    var nrows = 0;
+    function pushRow(frame, slow) {
+      if (nrows === cap) { cap *= 2; for (var q = 0; q < ncol; q++) { var a = new Float64Array(cap); a.set(cols[q]); cols[q] = a; } }
+      for (var q = 0; q < nMain; q++) cols[q][nrows] = frame[q];
+      for (var s = 0; s < nSlow; s++) cols[nMain + s][nrows] = slow[s];
+      nrows++;
+    }
+    // ---- Stream ----
+    var p = pos, eof = false;
+    function rb() { if (p >= end) { eof = true; p++; return 0; } return data[p++]; }
+    function uvb() { var r = 0, sh = 0; for (var i = 0; i < 5; i++) { if (p >= end) { eof = true; p++; return 0; } var c = data[p++]; r = (r | ((c & 0x7f) << sh)) >>> 0; if (c < 128) return r; sh += 7; } return 0; }
+    function svb() { var u = uvb(); return ((u >>> 1) ^ -(u & 1)) | 0; }
+    function t23s32(v) {
+      var lead = rb();
+      switch (lead >> 6) {
+        case 0: v[0] = sx((lead >> 4) & 3, 2); v[1] = sx((lead >> 2) & 3, 2); v[2] = sx(lead & 3, 2); break;
+        case 1: v[0] = sx(lead & 15, 4); lead = rb(); v[1] = sx(lead >> 4, 4); v[2] = sx(lead & 15, 4); break;
+        case 2: v[0] = sx(lead & 63, 6); lead = rb(); v[1] = sx(lead & 63, 6); lead = rb(); v[2] = sx(lead & 63, 6); break;
+        default:
+          for (var i = 0; i < 3; i++) {
+            switch (lead & 3) {
+              case 0: v[i] = sx(rb(), 8); break;
+              case 1: { var a = rb(), b = rb(); v[i] = sx(a | (b << 8), 16); break; }
+              case 2: { var a2 = rb(), b2 = rb(), c2 = rb(); v[i] = sx(a2 | (b2 << 8) | (c2 << 16), 24); break; }
+              default: { var a3 = rb(), b3 = rb(), c3 = rb(), d3 = rb(); v[i] = (a3 | (b3 << 8) | (c3 << 16) | (d3 << 24)) | 0; }
+            }
+            lead >>= 2;
+          }
+      }
+    }
+    function t84s16(v) {
+      var sel = rb(), buf = 0, nib = 0;
+      for (var i = 0; i < 4; i++) {
+        switch (sel & 3) {
+          case 0: v[i] = 0; break;
+          case 1: if (nib === 0) { buf = rb(); v[i] = sx(buf >> 4, 4); nib = 1; } else { v[i] = sx(buf & 15, 4); nib = 0; } break;
+          case 2: if (nib === 0) { v[i] = sx(rb(), 8); } else { var c1 = (buf << 4) & 255; buf = rb(); c1 |= buf >> 4; v[i] = sx(c1, 8); } break;
+          default:
+            if (nib === 0) { var a = rb(), b = rb(); v[i] = sx(((a << 8) | b) & 0xffff, 16); }
+            else { var a2 = rb(), b2 = rb(); v[i] = sx(((buf << 12) | (a2 << 4) | (b2 >> 4)) & 0xffff, 16); buf = b2; }
+        }
+        sel >>= 2;
+      }
+    }
+    function t88svb(v, count) {
+      if (count === 1) { v[0] = svb(); return; }
+      var h = rb(); for (var i = 0; i < 8; i++, h >>= 1) v[i] = (h & 1) ? svb() : 0;
+    }
+    // ---- Frames ----
+    var hist = [new Float64Array(nMain), new Float64Array(nMain), new Float64Array(nMain)];
+    var cur = hist[0], prev = null, prev2 = null, ring = 0;
+    var lastSlow = new Float64Array(Math.max(nSlow, 1)), lastIter = -1, lastTime = -1, rollover = 0;
+    var mainValid = false, lastSkipped = 0, ev = -1;
+    function should(fi) { return (((fi % cfg.frameIntervalI) + cfg.pNum - 1) % cfg.pDen) < cfg.pNum; }
+    function skippedFrames() { if (lastIter === -1) return 0; var c = 0; for (var fi = lastIter + 1; !should(fi); fi++) c++; return c; }
+    function predict(i, pr, value, frame) {
+      switch (pr) {
+        case 0: break;
+        case 4: value += cfg.minthrottle; break;
+        case 8: value += 1500; break;
+        case 5: value += frame[iMotor0]; break;
+        case 9: value += cfg.vbatref; break;
+        case 1: if (prev) value += prev[i]; break;
+        case 2: if (prev) value += 2 * prev[i] - prev2[i]; break;
+        case 3: if (prev) value += Math.trunc((prev[i] + prev2[i]) / 2); break;
+        case 10: if (prev) value += prev[iTime]; break;
+        case 11: value += cfg.motorOutputLow; break;
+        default: throw new Error('Predictor ' + pr + ' nicht unterstuetzt');
+      }
+      return value;
+    }
+    function parseFrame(t, frame, skipped) {
+      var d = defs[t], pred = d.pred, enc = d.enc, sg = d.signed, i = 0, v = [0, 0, 0, 0, 0, 0, 0, 0], val, j, gc;
+      while (i < d.n) {
+        if (pred[i] === 6) { frame[i] = skipped + 1 + (prev ? prev[i] : 0); i++; continue; }
+        switch (enc[i]) {
+          case ENC.SVB: val = svb(); break;
+          case ENC.UVB: val = uvb(); break;
+          case ENC.NEG14: val = -sx(uvb() & 0x3fff, 14); break;
+          case ENC.T8_4S16: t84s16(v); for (j = 0; j < 4; j++, i++) frame[i] = predict(i, pred[i], v[j], frame); continue;
+          case ENC.T2_3S32: t23s32(v); for (j = 0; j < 3; j++, i++) frame[i] = predict(i, pred[i], v[j], frame); continue;
+          case ENC.T8_8SVB:
+            for (j = i + 1; j < i + 8 && j < d.n; j++) if (enc[j] !== ENC.T8_8SVB) break;
+            gc = j - i; t88svb(v, gc); for (j = 0; j < gc; j++, i++) frame[i] = predict(i, pred[i], v[j], frame); continue;
+          case ENC.NUL: val = 0; break;
+          default: throw new Error('Encoding ' + enc[i] + ' nicht unterstuetzt');
+        }
+        val = predict(i, pred[i], val, frame);
+        frame[i] = sg[i] ? (val | 0) : (val >>> 0);   // Feldbreite 4 (Standard)
+        i++;
+      }
+    }
+    function rotate(isI) {
+      if (isI) { prev = hist[ring]; prev2 = hist[ring]; } else { prev2 = prev; prev = hist[ring]; }
+      ring = (ring + 1) % 3; cur = hist[ring];
+    }
+    function rolloverFix() {
+      var t = cur[iTime];
+      if (lastTime !== -1 && (t >>> 0) < (lastTime >>> 0) && (((t >>> 0) - (lastTime >>> 0)) >>> 0) < MAX_TIME_JUMP) rollover += 4294967296;
+      cur[iTime] = (t >>> 0) + rollover;
+    }
+    function validate() { return cur[iIter] >= lastIter && cur[iIter] < lastIter + MAX_ITER_JUMP && cur[iTime] >= lastTime && cur[iTime] < lastTime + MAX_TIME_JUMP; }
+    function invalidate() { mainValid = false; prev = null; prev2 = null; }
+    while (p < end) {
+      var m = MARKERS[data[p]];
+      if (!m) { mainValid = false; p++; continue; }
+      p++; var fs = p; eof = false;
+      var ok = true, t = m;
+      try {
+        if (t === 'I') { parseFrame('I', cur, 0); }
+        else if (t === 'P') { lastSkipped = skippedFrames(); parseFrame('P', cur, lastSkipped); }
+        else if (t === 'S') { if (S) parseFrame('S', lastSlow, 0); }
+        else if (t === 'G' || t === 'H') { if (defs[t]) parseFrame(t, new Float64Array(defs[t].n), 0); }
+        else if (t === 'E') {
+          var et = rb(); ev = et;
+          if (et === 0) uvb(); else if (et === 13) { var f = rb(); if (f > 127) { p += 4; } else svb(); }
+          else if (et === 14) { var li = uvb(), ct = uvb() + rollover; ev = { resume: [li, ct] }; }
+          else if (et === 255) { if (p + 11 <= end) { var s = ''; for (var z = 0; z < 11; z++) s += String.fromCharCode(data[p + z]); p += 11; if (s === 'End of log\0') end = p; else ev = -1; } else { p = end; } }
+          else ev = -1;
+        }
+      } catch (err) { if (/nicht unterstuetzt/.test(err.message)) throw err; ok = false; }
+      var size = p - fs;
+      if (!ok || size > MAX_FRAME_LEN) { mainValid = false; p = Math.max(p, fs) ; p++; continue; }
+      // ---- complete ----
+      if (t === 'I') {
+        rolloverFix();
+        if (lastIter !== -1 && !validate()) invalidate(); else mainValid = true;
+        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(true); }
+      } else if (t === 'P') {
+        rolloverFix();
+        if (mainValid && !validate()) invalidate();
+        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(false); }
+      } else if (t === 'E' && ev && ev.resume) { lastIter = ev.resume[0]; lastTime = ev.resume[1]; }
+    }
+    var out = { header: hdr, names: allNames, n: nrows, cols: {}, nMain: nMain };
+    for (var q = 0; q < ncol; q++) out.cols[allNames[q]] = cols[q].subarray(0, nrows);
+    return out;
+  }
+
+  function parse(buf) {
+    var data = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    var key = [72, 32, 80, 114, 111, 100, 117, 99, 116, 58]; // "H Product:"
+    var starts = [];
+    for (var i = 0; i + key.length < data.length; i++) {
+      if (data[i] === 72 && data[i + 1] === 32 && data[i + 2] === 80) {
+        var ok = true; for (var j = 3; j < key.length; j++) if (data[i + j] !== key[j]) { ok = false; break; }
+        if (ok) starts.push(i);
+      }
+    }
+    var logs = [];
+    for (var s = 0; s < starts.length; s++) {
+      var end = s + 1 < starts.length ? starts[s + 1] : data.length;
+      try { logs.push(parseOne(data, starts[s], end)); } catch (e) { logs.push({ error: e.message, header: {}, n: 0, cols: {}, names: [] }); }
+    }
+    return logs;
+  }
+  var api = { parse: parse };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.BBL = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Analyse-Kern: Port von analyze(), make_findings(), make_pid_recommendations() aus rf_loganalyzer.py */
+(function (root) {
+  'use strict';
+  var THRESH = { yaw_spike_hint: 4000, yaw_spike_warn: 10000, yaw_axis_ratio: 3.0, over_event_rpm: 100, over_rate_hint: 20, over_rate_warn: 45,
+    over_p99_hint: 110, under_p01_warn: -120, spool_down_loss_s: 1.0, vcell_load_hint: 3.5, vcell_load_warn: 3.3, vcell_rest_low: 3.70,
+    esc_temp_hint: 70, esc_temp_warn: 85, servo_limit_pct_warn: 1.0, peak_prominence: 3.0, coupling_hs_rpm: 10.0, coupling_share: 0.7,
+    osc_amp_rpm: 15.0, osc_pct_hint: 8.0 };
+  var ALIASES = {
+    govTarget: ['govTarget', 'governorTarget', 'governor_target'], Vbat: ['Vbat', 'vbatLatest', 'vbat', 'voltage'],
+    Ibat: ['Ibat', 'amperageLatest', 'amperage', 'current'], Tesc: ['Tesc', 'escTemperature', 'ESC_Temp'],
+    EscRPM: ['EscRPM', 'escRPM', 'motor_rpm'], EscThr: ['EscThr', 'escThrottle'], time: ['time', 'time (us)'],
+    failsafePhase: ['failsafePhase', 'failsafePhase (flags)'] };
+  var NaNv = NaN;
+
+  // ---------- Hilfsfunktionen ----------
+  function Frame(cols, n) { this.cols = cols; this.n = n; this._nan = null; }
+  Frame.prototype.has = function (name) { var a = ALIASES[name] || [name]; for (var i = 0; i < a.length; i++) if (this.cols[a[i]]) return true; return false; };
+  Frame.prototype.get = function (name) {
+    var a = ALIASES[name] || [name];
+    for (var i = 0; i < a.length; i++) if (this.cols[a[i]]) return this.cols[a[i]];
+    if (!this._nan) { this._nan = new Float64Array(this.n); this._nan.fill(NaN); }
+    return this._nan;
+  };
+  Frame.prototype.slice = function (a, b) { var c = {}, self = this; for (var k in this.cols) c[k] = this.cols[k].subarray(a, b); var f = new Frame(c, b - a); return f; };
+  function fin(x) { return x === x && x !== Infinity && x !== -Infinity; }
+  function sortedClean(a) { var o = []; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) o.push(a[i]); o.sort(function (x, y) { return x - y; }); return o; }
+  function medianSorted(s) { var n = s.length; if (!n) return NaN; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; }
+  function median(a) { return medianSorted(sortedClean(a)); }
+  function pctSorted(s, q) { var n = s.length; if (!n) return NaN; var x = q / 100 * (n - 1), lo = Math.floor(x), hi = Math.ceil(x); return s[lo] + (s[hi] - s[lo]) * (x - lo); }
+  function percentile(a, q) { return pctSorted(sortedClean(a), q); }
+  function nanmean(a) { var s = 0, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { s += a[i]; c++; } return c ? s / c : NaN; }
+  function nanmax(a) { var m = -Infinity, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { c++; if (a[i] > m) m = a[i]; } return c ? m : NaN; }
+  function nanmin(a) { var m = Infinity, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { c++; if (a[i] < m) m = a[i]; } return c ? m : NaN; }
+  function ptp(a, s, e) { var lo = Infinity, hi = -Infinity; for (var i = s; i < e; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; } return hi - lo; }
+  function meanRange(a, s, e) { var t = 0; for (var i = s; i < e; i++) t += a[i]; return t / (e - s); }
+  function rollMedianAt(a, i, w) { var off = Math.floor((w - 1) / 2), end = i + 1 + off, st = end - w; if (st < 0) st = 0; if (end > a.length) end = a.length; var t = []; for (var j = st; j < end; j++) if (a[j] === a[j]) t.push(a[j]); t.sort(function (x, y) { return x - y; }); return medianSorted(t); }
+  function rollMedian(a, w) { var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = rollMedianAt(a, i, w); return o; }
+  function pySlice(a, s, e) { var n = a.length; if (s < 0) s += n; if (e < 0) e += n; s = Math.max(0, s); e = Math.min(n, e); return s < e ? Array.prototype.slice.call(a, s, e) : []; }
+  function trapz(y, x) { var s = 0; for (var i = 1; i < y.length; i++) s += (y[i] + y[i - 1]) / 2 * (x[i] - x[i - 1]); return s; }
+  function mergedSegments(mask, t, gap) {
+    var idx = []; for (var i = 0; i < mask.length; i++) if (mask[i]) idx.push(i);
+    if (!idx.length) return [];
+    var segs = [], st = 0;
+    for (var k = 1; k < idx.length; k++) if (t[idx[k]] - t[idx[k - 1]] > gap) { segs.push([idx[st], idx[k - 1]]); st = k; }
+    segs.push([idx[st], idx[idx.length - 1]]); return segs;
+  }
+  // Teil-DFT (reelle Eingabe) fuer Bins k0..k1; optional Hann-Fenster
+  var _tw = {};
+  function twiddle(N) { if (_tw[N]) return _tw[N]; var c = new Float64Array(N), s = new Float64Array(N); for (var i = 0; i < N; i++) { c[i] = Math.cos(2 * Math.PI * i / N); s[i] = Math.sin(2 * Math.PI * i / N); } return (_tw[N] = { c: c, s: s }); }
+  var _hn = {};
+  function hann(N) { if (_hn[N]) return _hn[N]; var w = new Float64Array(N); for (var i = 0; i < N; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1)); return (_hn[N] = w); }
+  function dft(y, off, N, k0, k1, win) {
+    var tw = twiddle(N), mean = 0, i, k; for (i = 0; i < N; i++) mean += y[off + i]; mean /= N;
+    var z = new Float64Array(N), w = win ? hann(N) : null;
+    for (i = 0; i < N; i++) z[i] = (y[off + i] - mean) * (w ? w[i] : 1);
+    var re = new Float64Array(k1 + 1), im = new Float64Array(k1 + 1);
+    for (k = k0; k <= k1; k++) { var r = 0, m = 0, idx = 0; for (i = 0; i < N; i++) { r += z[i] * tw.c[idx]; m -= z[i] * tw.s[idx]; idx += k; if (idx >= N) idx %= N; } re[k] = r; im[k] = m; }
+    return { re: re, im: im };
+  }
+  function bandBins(N, fs, lo, hi, strict) { var a = [], half = Math.floor(N / 2); for (var k = 0; k <= half; k++) { var f = k * fs / N; if (strict ? (f > lo && f < hi) : (f >= lo && f <= hi)) a.push(k); } return a; }
+  function bandEnergy(y, off, N, fs, lo, hi) {   // -> [sum|X|, f_at_max, max|X|]
+    var b = bandBins(N, fs, lo, hi, true); if (!b.length) return [0, 0, 0];
+    var d = dft(y, off, N, b[0], b[b.length - 1], true), s = 0, mx = -1, fm = 0;
+    for (var j = 0; j < b.length; j++) { var k = b[j], a = Math.hypot(d.re[k], d.im[k]); s += a; if (a > mx) { mx = a; fm = k * fs / N; } }
+    return [s, fm, mx];
+  }
+  function bandRms(y, off, N, fs, lo, hi) {
+    var b = bandBins(N, fs, lo, hi, false); if (!b.length) return 0;
+    var d = dft(y, off, N, b[0], b[b.length - 1], false), s = 0, half = N / 2;
+    for (var j = 0; j < b.length; j++) { var k = b[j]; if (k === 0) continue; var p = d.re[k] * d.re[k] + d.im[k] * d.im[k]; s += (k === half) ? p : 2 * p; }
+    return Math.sqrt(s / (N * N));
+  }
+  function fnum(x, nd, unit) { if (x === null || x === undefined || !fin(x)) return '-'; return x.toFixed(nd || 0) + (unit || ''); }
+  function pidParts(s) { var p = String(s || '').split(','), o = []; for (var i = 0; i < 5; i++) { var v = parseFloat(p[i]); o.push(isNaN(v) ? NaN : v); } return o; }
+  function firstNum(s) { var v = parseFloat(String(s || '').split(',')[0]); return isNaN(v) ? NaN : v; }
+
+  // ---------- Vorbereitung ----------
+  function prepare(log) {
+    var cols = {}, n = log.n, k;
+    var SIGNED = ['gyro', 'axisP', 'axisI', 'axisD', 'axisF', 'axisO', 'setpoint[0]', 'setpoint[1]', 'setpoint[2]', 'rcCommand[0]', 'rcCommand[1]', 'rcCommand[2]'];
+    for (k in log.cols) {
+      var a = log.cols[k];
+      var isS = SIGNED.some(function (p) { return k.indexOf(p) === 0; });
+      if (isS && nanmax(a) > Math.pow(2, 30)) { var c = new Float64Array(n); for (var i = 0; i < n; i++) c[i] = a[i] > 2147483648 ? a[i] - 4294967296 : a[i]; a = c; }
+      cols[k] = a;
+    }
+    var f = new Frame(cols, n), tt = f.get('time'), t = new Float64Array(n), t0 = tt[0];
+    for (var i2 = 0; i2 < n; i2++) t[i2] = (tt[i2] - t0) / 1e6;
+    cols.t = t; f.t = t; return f;
+  }
+  function voltDiv(vb, hdr) {
+    var v = []; for (var i = 0; i < vb.length; i++) if (vb[i] > 0) v.push(vb[i]);
+    if (!v.length) return 1.0;
+    var head = v.slice(0, Math.max(Math.floor(v.length / 20), 1)), start = percentile(head, 90), ref = parseFloat((hdr || {}).vbatref) / 100;
+    if (fin(ref) && ref > 0) { var best = 1, bd = Infinity; [1, 10, 100, 1000].forEach(function (d) { var e = Math.abs(Math.log((start / d) / ref)); if (e < bd) { bd = e; best = d; } }); return best; }
+    var med = median(v); return med > 1000 ? 1000 : (med > 60 ? 10 : 1);
+  }
+
+  // ---------- Analyse ----------
+  function analyze(df, hdr, name, cellsArg) {
+    var t = df.t, n = df.n, i, j, k;
+    var m = { name: name, hdr: hdr, ok: false };
+    var dts = []; for (i = 1; i < Math.min(n, 20001); i++) dts.push(t[i] - t[i - 1]);
+    var fs = 1 / median(dts); m.fs = fs;
+    var hsRaw = df.get('headspeed'), hs = new Float64Array(n); for (i = 0; i < n; i++) hs[i] = hsRaw[i] === hsRaw[i] ? hsRaw[i] : 0;
+    if (nanmax(hs) < 50) { var er = df.get('EscRPM'); for (i = 0; i < n; i++) hs[i] = er[i] === er[i] ? er[i] : 0; }
+    var tgtRaw = df.get('govTarget'), tgt = new Float64Array(n); for (i = 0; i < n; i++) tgt[i] = tgtRaw[i] === tgtRaw[i] ? tgtRaw[i] : 0;
+    var mask = new Uint8Array(n); for (i = 0; i < n; i++) mask[i] = hs[i] > 50 ? 1 : 0;
+    var segs = mergedSegments(mask, t, 2.0);
+    if (!segs.length) { m.error = 'Kein Rotorlauf im Log gefunden.'; return m; }
+    var best = segs[0]; segs.forEach(function (s) { if (t[s[1]] - t[s[0]] > t[best[1]] - t[best[0]]) best = s; });
+    var i0 = best[0], i1 = best[1];
+    if (t[i1] - t[i0] < 20) { m.error = 'Rotorlauf kuerzer als 20 s - zu kurz fuer eine sinnvolle Analyse.'; return m; }
+    m.ok = true; m.t0 = t[i0]; m.t1 = t[i1];
+    // Ziel-Drehzahl
+    var pos = []; for (i = i0; i <= i1; i++) if (tgt[i] > 50) pos.push(tgt[i]);
+    var noTgt = !pos.length, tgtMed, fixedFrac = 0;
+    if (noTgt) { var hv = []; for (i = i0; i <= i1; i++) hv.push(hs[i]); hv.sort(function (a, b) { return a - b; }); var p90 = hv[Math.floor(hv.length * 0.9)]; var hh = hv.filter(function (x) { return x > 0.9 * p90; }); tgtMed = hh.length ? median(hh) : nanmax(hs); }
+    else tgtMed = median(pos);
+    if (pos.length) { var c2 = 0; pos.forEach(function (x) { if (Math.abs(x - tgtMed) <= 2) c2++; }); fixedFrac = c2 / pos.length; }
+    m.target = tgtMed; m.target_fixed = fixedFrac > 0.6;
+    // Hochlauf / Gaskappung / Auslauf
+    var iUp = i0, upFound = false; for (i = i0; i <= i1; i++) if (hs[i] >= 0.95 * tgtMed) { iUp = i; upFound = true; break; }
+    m.spool_up_s = upFound ? t[iUp] - t[i0] : NaN;
+    var s5 = i0 + Math.floor(5 * fs), iCut = i1;
+    if (noTgt) { var low = 0; for (i = Math.max(s5, iUp); i <= i1; i++) { if (hs[i] < 0.9 * tgtMed) { if (++low > fs * 0.5) { iCut = i - low + 1; break; } } else low = 0; } }
+    else for (i = s5; i <= i1; i++) if (tgt[i] === 0 && hs[i] > 50) { iCut = i; break; }
+    m.t_cut = t[iCut]; var downT = NaN; for (i = iCut; i < n; i++) if (hs[i] < 50) { downT = t[i] - t[iCut]; break; }
+    m.spool_down_s = downT; m.hs_at_cut = hs[Math.max(iCut - 1, 0)];
+    var iFl = Math.min(iUp + Math.floor(2 * fs), iCut - 1);
+    var fl = df.slice(iFl, iCut); m.fl = fl; m.iFl = iFl; m.iCut = iCut;
+    var flt = fl.t = fl.cols.t; fl.n = iCut - iFl;
+    m.flight_s = fl.n > 10 ? flt[fl.n - 1] - flt[0] : 0;
+    if (m.flight_s < 15) { m.ok = false; m.error = 'Flugphase (Drehzahl erreicht bis Gaskappung) kuerzer als 15 s.'; return m; }
+    // Elektrik
+    var vb = df.get('Vbat'), ib = df.get('Ibat'), vdiv = voltDiv(vb, hdr);
+    var ibv = []; for (i = 0; i < n; i++) if (ib[i] === ib[i] && ib[i] !== 0) ibv.push(ib[i]);
+    var ibMed = ibv.length ? median(ibv) : NaN, idiv = (fin(ibMed) && ibMed > 500) ? 100 : 1;
+    m.vdiv = vdiv; m.idiv = idiv;
+    var V = new Float64Array(n), I = new Float64Array(n); for (i = 0; i < n; i++) { V[i] = vb[i] / vdiv; I[i] = ib[i] / idiv; }
+    var flV = V.subarray(iFl, iCut), flI = I.subarray(iFl, iCut); fl.cols.V = flV; fl.cols.I = flI;
+    var s2 = [], tc = 0; for (i = 0; i < n && t[i] < 2; i++) s2.push(V[i]);
+    m.v_start = nanmean(s2);
+    m.cells = (cellsArg || Math.ceil(m.v_start / 4.25)); if (!(m.v_start > 3)) m.cells = 1;
+    var vs = rollMedian(flV, 25); m.v_min = nanmin(vs); m.v_min_cell = m.v_min / m.cells;
+    m.hasElec = fin(m.v_min) && fin(nanmax(flI));
+    m.i_peak = nanmax(flI); m.i_mean = nanmean(flI);
+    var Pw = new Float64Array(fl.n); for (i = 0; i < fl.n; i++) Pw[i] = flI[i] * flV[i];
+    m.p_peak = nanmax(Pw); m.p_mean = nanmean(Pw);
+    var sA = 0, sB = 0; for (i = 0; i < n; i++) { if (t[i] >= t[i0]) { sA = i; break; } } for (i = n - 1; i >= 0; i--) { if (t[i] <= t[i1]) { sB = i + 1; break; } }
+    var segT = t.subarray(sA, sB), segI = I.subarray(sA, sB), segV = V.subarray(sA, sB);
+    m.mah = trapz(segI, segT) / 3.6;
+    var iv = new Float64Array(segI.length); for (i = 0; i < iv.length; i++) iv[i] = segI[i] * segV[i];
+    m.wh = trapz(iv, segT) / 3600;
+    var cum = new Float64Array(segI.length), acc = 0; for (i = 1; i < segI.length; i++) { acc += (segI[i] + segI[i - 1]) / 2 * (segT[i] - segT[i - 1]); cum[i] = acc / 3.6; }
+    var step = Math.max(Math.floor(fs), 1), cx = [], cv = []; for (i = 0; i < cum.length; i += step) { cx.push(cum[i]); cv.push(rollMedianAt(segV, i, 1000) / m.cells); }
+    m.curve = [cx, cv];
+    var tailV = [], tEnd = t[n - 1]; for (i = 0; i < n; i++) if (t[i] > tEnd - 3 && I[i] < 2) tailV.push(V[i]);
+    m.v_rest_cell = tailV.length > 20 ? nanmean(tailV) / m.cells : NaN;
+    var te = df.get('Tesc'), ts3 = []; for (i = 0; i < n && t[i] < 3; i++) ts3.push(te[i]);
+    m.t_esc_start = nanmean(ts3); m.t_esc_max = nanmax(te);
+    // Governor
+    var flHs = fl.get('headspeed'), flTg = fl.get('govTarget'); m.gov = {};
+    if (m.target_fixed) {
+      var gi = []; for (i = 0; i < fl.n; i++) if (Math.abs(tgt[iFl + i] - tgtMed) <= 2) gi.push(i);
+      var e = gi.map(function (ix) { return flHs[ix] - tgtMed; });
+      if (e.length > 2000) {
+        var evn = 0; for (i = 1; i < e.length; i++) if ((e[i] > THRESH.over_event_rpm ? 1 : 0) - (e[i - 1] > THRESH.over_event_rpm ? 1 : 0) === 1) evn++;
+        var mins = e.length / fs / 60, es = sortedClean(e), am = 0, w20 = 0; e.forEach(function (x, ix) { if (x > e[am]) am = ix; if (Math.abs(x) <= 20) w20++; });
+        m.gov = { rate: evn / mins, p99: pctSorted(es, 99), p01: pctSorted(es, 1), maxover: nanmax(e), median: medianSorted(es), within20: w20 / e.length * 100, t_worst: flt[gi[am]] };
+      }
+    } else {
+      var e2 = new Float64Array(fl.n), w2 = 0, md = 0; for (i = 0; i < fl.n; i++) { e2[i] = flHs[i] - flTg[i]; if (Math.abs(e2[i]) <= 20) w2++; if (Math.abs(e2[i]) > md) md = Math.abs(e2[i]); }
+      m.gov = { variable: true, within20: w2 / fl.n * 100, maxdev: md };
+    }
+    // Heck
+    var gy = {}; for (k = 0; k < 3; k++) if (fl.has('gyroADC[' + k + ']')) gy[k] = fl.get('gyroADC[' + k + ']');
+    var rc = [0, 1, 2].map(function (q) { return fl.has('rcCommand[' + q + ']') ? fl.get('rcCommand[' + q + ']') : null; });
+    var hasRc2 = !!rc[2], ysp = new Float64Array(fl.n), allst = new Float64Array(fl.n);
+    for (i = 0; i < fl.n; i++) { ysp[i] = hasRc2 ? Math.abs(rc[2][i]) : 0; allst[i] = hasRc2 ? (Math.abs(rc[0][i]) + Math.abs(rc[1][i]) + Math.abs(rc[2][i])) / 3 : ysp[i]; }
+    var win = Math.floor(fs), stp = Math.floor(fs / 2), yE = [], yF = [], wT = [], yPk = [], yH = [];
+    for (var s0 = 0; s0 < fl.n - win; s0 += stp) {
+      if (meanRange(ysp, s0, s0 + win) < 30 && gy[2]) {
+        var b2 = bandEnergy(gy[2], s0, win, fs, 8, 20), br = bandEnergy(gy[0], s0, win, fs, 8, 20), bp = bandEnergy(gy[1], s0, win, fs, 8, 20);
+        yE.push(b2[0]); yF.push(b2[1]); wT.push(flt[s0]); yPk.push(b2[2] / Math.max(br[2], bp[2], 1.0));
+        var fixedW = m.target_fixed && ptp(flTg, s0, s0 + win) <= 5;
+        yH.push(fixedW ? bandRms(flHs, s0, win, fs, 5, 20) : NaN);
+      }
+    }
+    m.yaw = { t: wT, E: yE, F: yF, ratio_arr: yPk, H: yH };
+    var evIdx = []; for (i = 0; i < yE.length; i++) if (yE[i] >= THRESH.yaw_spike_hint && yH[i] === yH[i]) evIdx.push(i);
+    if (evIdx.length >= 1) {
+      var hv = evIdx.map(function (ix) { return yH[ix]; }), cnt = hv.filter(function (x) { return x >= THRESH.coupling_hs_rpm; }).length;
+      m.yaw.coupling = { n: evIdx.length, share: cnt / evIdx.length, med_hs: median(hv), med_all: median(yH.filter(function (x) { return x === x; })) };
+    } else m.yaw.coupling = null;
+    if (yE.length) {
+      var kk = 0; yE.forEach(function (x, ix) { if (x > yE[kk]) kk = ix; });
+      var yes = sortedClean(yE);
+      Object.assign(m.yaw, { median: medianSorted(yes), p95: pctSorted(yes, 95), max: yE[kk], f_max: yF[kk], ratio: yPk[kk], t_max: wT[kk], n: yE.length });
+    }
+    // Hover-Spektrum
+    var w2s = Math.floor(2 * fs), wobble = [], hov = [];
+    for (s0 = 0; s0 < fl.n - w2s; s0 += Math.floor(w2s / 2)) {
+      if (meanRange(allst, s0, s0 + w2s) < 25 && gy[0]) {
+        wobble.push((bandRms(gy[0], s0, w2s, fs, 2, 8) + bandRms(gy[1], s0, w2s, fs, 2, 8)) / 2);
+        var kmax = Math.ceil(61 * w2s / fs), accs = [];
+        for (k = 0; k < 3; k++) { var d = dft(gy[k], s0, w2s, 0, kmax, true), amp = new Float64Array(kmax + 1); for (j = 0; j <= kmax; j++) amp[j] = Math.hypot(d.re[j], d.im[j]) / w2s; accs.push(amp); }
+        hov.push(accs);
+      }
+    }
+    m.wobble = wobble.length >= 3 ? median(wobble) : NaN; m.wobble_n = wobble.length; m.hover_peaks = []; m.hover_n = hov.length;
+    if (hov.length >= 3) {
+      var df2 = fs / w2s, labs = ['Roll', 'Nick', 'Gier']; m.hover_spec = { df: df2, axes: [] };
+      for (k = 0; k < 3; k++) {
+        var sp = new Float64Array(hov[0][k].length); for (var h = 0; h < hov.length; h++) for (j = 0; j < sp.length; j++) sp[j] += hov[h][k][j] / hov.length;
+        m.hover_spec.axes.push(sp);
+        for (j = Math.floor(3 / df2); j < Math.floor(40 / df2); j++) {
+          var loc = pySlice(sp, j - 8, j - 2).concat(pySlice(sp, j + 3, j + 9)), mx = Math.max.apply(null, pySlice(sp, j - 2, j + 3));
+          if (sp[j] === mx && sp[j] / Math.max(median(loc), 1e-9) >= THRESH.peak_prominence) m.hover_peaks.push([labs[k], j * df2, sp[j] / Math.max(median(loc), 1e-9)]);
+        }
+      }
+      m.hover_peaks.sort(function (a, b) { return b[2] - a[2]; });
+    }
+    // Drehzahl-Pendeln
+    var osc = { n: 0, n_big: 0, f: [], worst: null };
+    if (m.target_fixed) {
+      var w3 = Math.floor(2 * fs), st3 = Math.floor(fs), wmax = 0;
+      for (s0 = 0; s0 < fl.n - w3; s0 += st3) {
+        if (ptp(flTg, s0, s0 + w3) > 5) continue;
+        var amp2 = bandRms(flHs, s0, w3, fs, 2, 10); osc.n++;
+        if (amp2 > THRESH.osc_amp_rpm) { osc.n_big++; osc.f.push(bandEnergy(flHs, s0, w3, fs, 2, 10)[1]); }
+        if (amp2 > wmax) { wmax = amp2; osc.worst = flt[s0] + 1.0; }
+      }
+      osc.amp_max = wmax;
+    }
+    m.osc = osc;
+    // Regelverhalten
+    var trk = {}; ['Roll', 'Nick', 'Gier'].forEach(function (lab, kx) {
+      if (fl.has('setpoint[' + kx + ']') && gy[kx]) {
+        var sp2 = fl.get('setpoint[' + kx + ']'), er2 = []; for (var q = 0; q < fl.n; q++) if (Math.abs(sp2[q]) > 150) er2.push(Math.abs(sp2[q] - gy[kx][q]));
+        if (er2.length > 200) trk[lab] = [median(er2), percentile(er2, 95), er2.length];
+      }
+    });
+    m.track = trk;
+    // Servos
+    var sv = {}; for (k = 0; k < 4; k++) if (fl.has('servo[' + k + ']')) {
+      var x = fl.get('servo[' + k + ']'), okAll = true; for (i = 0; i < x.length; i++) if (x[i] !== x[i]) { okAll = false; break; }
+      if (!okAll) continue; var lo = nanmin(x), hi = nanmax(x), cl = 0, ch = 0; for (i = 0; i < x.length; i++) { if (x[i] <= lo + 1) cl++; if (x[i] >= hi - 1) ch++; }
+      sv[k] = { lo: lo, hi: hi, pct_lo: cl / x.length * 100, pct_hi: ch / x.length * 100 };
+    }
+    m.servo = sv;
+    // Antrieb / Reserve
+    m.mot = null;
+    var thr = fl.get('EscThr'), thrMax = 0; for (i = 0; i < thr.length; i++) if (thr[i] === thr[i] && Math.abs(thr[i]) > thrMax) thrMax = Math.abs(thr[i]);
+    var src = thrMax > 0 ? 'EscThr' : 'motor[0]', mo = fl.get(src), mmax = nanmax(mo);
+    if (fin(mmax) && mmax > 0) {
+      var sc = mmax > 100 ? 10 : 1, ms = [], moArr = new Float64Array(fl.n);
+      for (i = 0; i < fl.n; i++) { moArr[i] = mo[i] / sc; var stab = m.target_fixed ? Math.abs(flTg[i] - tgtMed) <= 2 : true; if (stab && moArr[i] > 0) ms.push(moArr[i]); }
+      if (ms.length > 200) { var mean = nanmean(ms), pk = nanmax(moArr), pi2 = 0; for (i = 0; i < fl.n; i++) if (moArr[i] > moArr[pi2]) pi2 = i;
+        var nearc = ms.filter(function (x) { return x >= 95; }).length; m.mot = { src: src, mean: mean, reserve: 100 - mean, peak: pk, near: nearc / ms.length * 100, t_peak: flt[pi2], arr: moArr }; }
+    }
+    // Signal
+    m.rx_loss = 0; if (fl.has('rxSignalReceived')) { var rr = fl.get('rxSignalReceived'); for (i = 0; i < rr.length; i++) if (rr[i] === 0) m.rx_loss++; }
+    m.failsafe_active = false; if (fl.has('failsafePhase')) { var fp = fl.get('failsafePhase'); for (i = 0; i < fp.length; i++) if (fp[i] !== 0) { m.failsafe_active = true; break; } }
+    m.v_zero = 0; for (i = 0; i < flV.length; i++) if (flV[i] <= 0.1) m.v_zero++;
+    m.escthr_dead = fl.has('EscThr') ? thrMax === 0 : null;
+    m.stick_activity = nanmean(allst);
+    return m;
+  }
+
+  var api = { analyze: analyze, prepare: prepare, THRESH: THRESH, Frame: Frame, fnum: fnum, pidParts: pidParts, firstNum: firstNum, util: { median: median, percentile: percentile, nanmean: nanmean, nanmax: nanmax, nanmin: nanmin, rollMedian: rollMedian, dft: dft, hann: hann, fin: fin, pySlice: pySlice, voltDiv: voltDiv } };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFA = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Port von make_findings(), overall_state(), make_pid_recommendations() */
+(function (root) {
+  'use strict';
+  var A = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./analysis.js') : root.RFA;
+  var T = A.THRESH, fnum = A.fnum, firstNum = A.firstNum, fin = A.util.fin;
+  var SEV_ORDER = { warn: 0, hint: 1, info: 2, ok: 3 };
+  var SEV_LABEL = { warn: 'Handlungsbedarf', hint: 'Hinweis', info: 'Info', ok: 'In Ordnung' };
+  var f0 = function (x) { return x.toFixed(0); }, f1 = function (x) { return x.toFixed(1); }, f2 = function (x) { return x.toFixed(2); };
+
+  function makeFindings(m) {
+    var F = [], hdr = m.hdr || {};
+    function add(sev, area, title, obs, todo) { F.push({ sev: sev, area: area, title: title, obs: obs || '', todo: todo || '' }); }
+    if (!m.ok) { add('info', 'Log', 'Log nicht ausgewertet', m.error || '', ''); return F; }
+    // ---------- Heck ----------
+    var y = m.yaw;
+    if (y.max !== undefined) {
+      var notch = firstNum(hdr.dyn_notch_min_hz), below = fin(notch) && y.f_max < notch, specific = y.ratio >= T.yaw_axis_ratio;
+      var axis = specific ? 'fast nur auf der Gier-Achse (Peak ' + f1(y.ratio) + 'x hoeher als auf Roll/Nick) - typisch fuer eine Regelkreis-Schwingung des Hecks'
+        : 'auch auf Roll/Nick sichtbar (Gier-Peak nur ' + f1(y.ratio) + 'x hoeher) - kann Gesamtstoerung oder Mechanik sein';
+      var obs = 'Bei ruhigem Gier-Stick faellt die staerkste Schwingung bei ' + f1(y.f_max) + ' Hz auf, ' + axis + '. Spitzenwert ' + f0(y.max) + ', typischer Wert ' + f0(y.median) +
+        ' (Richtwerte: ab ' + f0(T.yaw_spike_hint) + ' Hinweis, ab ' + f0(T.yaw_spike_warn) + ' Handlungsbedarf).';
+      if (below) obs += ' Sie liegt unter der Notch-Filtergrenze (' + f0(notch) + ' Hz) - die Filter koennen hier nichts ausrichten, es muss an der Quelle behoben werden.';
+      var todoPid = 'Yaw-P in Schritten von 10-15 % senken (nur einen Wert pro Flug aendern), danach Log vergleichen. Reicht das nicht: yaw_stop_gain senken (laut Rotorflight-Doku kann ein zu hoher Wert schnelle Schwingungen ausloesen) oder Yaw-D pruefen. Rotorflight-Tuning-Doku: schnelle Schwingungen sind typisch fuer zu hohes P bzw. D.';
+      var todoMech = 'Mechanik pruefen: Heckantrieb (Riemenspannung/Zahnspiel), Heckrotorlager, Blattgriffe, Rahmenschrauben/Elektronikdaempfung. Zusaetzlich ist eine Yaw-P-Senkung um 10-15 % ein risikoarmer Test.';
+      var todo = specific ? todoPid : todoMech;
+      if (y.max >= T.yaw_spike_warn) add('warn', 'Heck', 'Heck schwingt bei ruhigem Stick', obs, todo);
+      else if (y.max >= T.yaw_spike_hint) add('hint', 'Heck', 'Gelegentliche Heck-Schwingungsspitzen', obs, todo);
+      else add('ok', 'Heck', 'Heck ruhig', obs);
+    }
+    var cp = y.coupling;
+    if (cp && cp.n >= 3 && cp.share >= T.coupling_share) {
+      add('hint', 'Heck', 'Heck und Drehzahl schwingen gemeinsam',
+        'In ' + cp.n + ' Fenstern mit Heck-Schwingung schwingt gleichzeitig auch die Kopfdrehzahl (' + f0(cp.med_hs) + ' U/min RMS im Band 5-20 Hz, sonst typisch ' + f1(cp.med_all) + '); ' + f0(cp.share * 100) + ' % dieser Fenster zeigen das.',
+        "Moegliche Kopplung: Laut Rotorflight-Quellcode mischt der Governor den Betrag des Heck-PID-Ausgangs (Gewicht 'Yaw-Vorsteuerung') in die Gas-Vorsteuerung. Schwingt das Heck, schwingt dadurch auch das Gas; bei mechanisch angetriebenem Heck wirkt die Drehzahl zusaetzlich direkt auf den Heckschub. Test: im Governor-Profil die Yaw-Vorsteuerung (und ggf. Cyclic-Vorsteuerung) senken, nur das in einem Flug aendern und vergleichen. Das ist eine Hypothese - belegt ist nur das gemeinsame Auftreten, nicht die Ursache.");
+    }
+    // ---------- Governor ----------
+    var g = m.gov;
+    if (g.variable) {
+      add('info', 'Governor', 'Variables Drehzahlziel (Ziel folgt dem Gasstick/Kurve)', f0(g.within20) + ' % der Zeit innerhalb +-20 U/min, groesste Abweichung ' + f0(g.maxdev) + '. Ueberschwinger-Statistik ist bei variablem Ziel nicht aussagekraeftig.',
+        'Fuer eine saubere Governor-Beurteilung ein festes Ziel fliegen (Gas auf Anschlag/Profilumschaltung).');
+    } else if (g.rate !== undefined) {
+      var o2 = 'Bei festem Ziel ' + f0(m.target) + ': ' + f0(g.within20) + ' % der Zeit innerhalb +-20 U/min; ' + f0(g.rate) + ' Ueberschwinger (>' + T.over_event_rpm + ' U/min) pro Minute, 99-%-Wert +' + f0(g.p99) + ', groesster +' + f0(g.maxover) + '; untere Seite (1-%-Wert) ' + f0(g.p01) + '.';
+      var overDom = g.p99 > 2 * Math.abs(g.p01);
+      var td = overDom ? "Die Drehzahl liegt deutlich haeufiger UEBER als UNTER dem Ziel. Laut Rotorflight-Governor-Doku fuehrt ein zu hohes F-Gain dazu, dass die Drehzahl kurzzeitig zu hoch ist (zu niedriges F: sie faellt bei Pitch-Pumps ein). Pruefe daher F-Gain und die Vorsteuerungs-Gewichte Collective/Cyclic/Yaw im Governor-Profil (stehen nicht im Log-Header) und senke sie in 10er-Schritten. Schaue dir die Form an: einmalige Spitze = Vorsteuerung zu hoch; periodisches Pendeln siehe Befund 'Drehzahl pendelt'."
+        : 'Die Drehzahl bricht eher ein als sie ueberschiesst: F-Gain bzw. Vorsteuerung (Collective/Cyclic/Yaw) erhoehen (10er-Schritte), dann P/I pruefen und Leistungsreserve (Akku, ESC) kontrollieren.';
+      td += ' Flugstil beeinflusst die Zahlen stark - vergleiche nur Fluege mit aehnlicher Belastung.';
+      if (g.rate >= T.over_rate_warn || g.p99 >= T.over_p99_hint * 1.5) add('warn', 'Governor', 'Drehzahl schiesst bei Lastwechseln deutlich ueber das Ziel', o2, td);
+      else if (g.rate >= T.over_rate_hint || g.p99 >= T.over_p99_hint) add('hint', 'Governor', 'Gelegentliche Drehzahl-Ueberschwinger', o2, td);
+      else add('ok', 'Governor', 'Governor haelt die Drehzahl sauber', o2);
+      if (g.p01 <= T.under_p01_warn) add('warn', 'Governor', 'Drehzahl bricht unter Last ein', '1-%-Wert der Abweichung ' + f0(g.p01) + ' U/min unter Ziel.',
+        'Leistungsreserve pruefen: Akkuzustand/Spannungseinbruch, ESC-Strombegrenzung, Motor-/Uebersetzungsauslegung; F-Gain ggf. erhoehen.');
+      var o = m.osc;
+      if (o.n >= 20) {
+        var pct = 100 * o.n_big / o.n, fmed = o.f.length ? A.util.median(o.f) : NaN;
+        var ob = 'In ' + f1(pct) + ' % der 2-Sekunden-Fenster pendelt die Drehzahl periodisch (2-10 Hz, mehr als ' + f0(T.osc_amp_rpm) + ' U/min RMS), typische Frequenz ' + fnum(fmed, 1) + ' Hz, staerkste Episode ' + f0(o.amp_max) + ' U/min RMS.';
+        if (pct >= T.osc_pct_hint) add('hint', 'Governor', 'Drehzahl pendelt zeitweise', ob, "Rotorflight-Doku: Zu hohes Governor-P bzw. Master-Gain laesst die Drehzahl pendeln/'surgen'. P-Gain in 10er-Schritten senken (Doku-Regel: P bis zu leichten Schwingungen erhoehen, dann um 1/3 zurueck). Pruefe auch Headspeed-Filter-Cutoff und die RPM-Signalqualitaet. Streut die Frequenz stark, kommt es eher von Lastwechseln als von einer festen Resonanz.");
+        else add('ok', 'Governor', 'Kein nennenswertes Drehzahl-Pendeln', ob);
+      }
+    }
+    // Hochlauf / Auslauf
+    if (fin(m.spool_down_s) && m.spool_down_s < T.spool_down_loss_s && m.hs_at_cut > 500) {
+      add('hint', 'ESC/Telemetrie', 'Drehzahl-Telemetrie bricht nach Gaskappung sofort ab', 'Von ' + f0(m.hs_at_cut) + ' auf 0 in ' + f1(m.spool_down_s) + ' s - ein freilaufender Rotor kann das physikalisch kaum. Entweder meldet der ESC nach der Gaskappung keine RPM mehr, oder er bremst den Rotor aktiv.',
+        'Stoppuhr-Test am Boden: laeuft der Rotor mehrere Sekunden aus -> nur Telemetrie. Steht er in unter 1 s -> Bremse im ESC abschalten. Beachte: bei Autorotationsuebungen waere die RPM-Anzeige dann blind.');
+    } else if (fin(m.spool_down_s)) {
+      add('info', 'Governor', 'Hoch-/Auslauf', 'Hochlauf auf 95 % des Ziels: ' + fnum(m.spool_up_s, 1) + ' s; Auslauf nach Gaskappung: ' + fnum(m.spool_down_s, 1) + ' s.');
+    }
+    // ---------- Akku / ESC ----------
+    var vc = m.v_min_cell;
+    if (!m.hasElec) add('info', 'Akku', 'Keine Spannungs-/Stromdaten geloggt', 'In diesem Log fehlen Vbat/Ibat (Telemetrie-Felder nicht im Blackbox-Setup aktiv).', 'Optional: Blackbox-Felder fuer Spannung/Strom aktivieren, dann wird auch der Akku ausgewertet.');
+    else {
+    var ob2 = 'Start ' + f1(m.v_start) + ' V (' + m.cells + 'S angenommen), tiefster Wert unter Last ' + f1(m.v_min) + ' V (' + f2(vc) + ' V/Zelle), Spitzenstrom ' + f0(m.i_peak) + ' A, Spitzenleistung ' + f1(m.p_peak / 1000) + ' kW, Verbrauch ' + f0(m.mah) + ' mAh (' + f0(m.wh) + ' Wh).';
+    if (vc < T.vcell_load_warn) add('warn', 'Akku', 'Starker Spannungseinbruch unter Last', ob2, 'Akku/Kabel/Stecker pruefen, groesseren oder frischeren Akku verwenden, Flugzeit kuerzen.');
+    else if (vc < T.vcell_load_hint) add('hint', 'Akku', 'Spannung bricht unter Last spuerbar ein', ob2, 'Beobachten: verschlechtert sich der Wert ueber mehrere Fluege, ist der Akku am Ende.');
+    else add('ok', 'Akku', 'Spannungseinbruch unkritisch', ob2);
+    if (fin(m.v_rest_cell)) {
+      var r = m.v_rest_cell;
+      if (r < T.vcell_rest_low) add('hint', 'Akku', 'Akku tief entladen gelandet', 'Ruhespannung nach der Landung ' + f2(r) + ' V/Zelle.', 'Flugzeit kuerzen oder Akku frueher wechseln (Richtwert: ab etwa 3,7-3,8 V/Zelle Ruhespannung landen).');
+      else add('ok', 'Akku', 'Landung mit Reserve', 'Ruhespannung nach der Landung ' + f2(r) + ' V/Zelle.');
+    }
+    }
+    var te = m.t_esc_max;
+    if (!fin(te)) add('info', 'ESC', 'ESC-Temperatur nicht geloggt', 'ESC-Temperatursensor nicht im Log vorhanden. Aktiviere ESC-Telemetrie fuer Temperaturueberwachung.');
+    else {
+      var ob3 = 'ESC-Temperatur: Start ' + f0(m.t_esc_start) + ' C, Maximum ' + f0(te) + ' C (Anstieg ' + f0(te - m.t_esc_start) + ' C).';
+      if (te >= T.esc_temp_warn) add('warn', 'ESC', 'ESC sehr heiss', ob3, 'Kuehlung/Luftfuehrung verbessern, Flugzeit oder Last reduzieren. Grenzwerte haengen vom ESC ab - Datenblatt pruefen.');
+      else if (te >= T.esc_temp_hint) add('hint', 'ESC', 'ESC wird warm', ob3, 'Trend ueber mehrere Fluege beobachten (Kuehlung, Aussentemperatur, mittlere Leistung).');
+      else add('ok', 'ESC', 'ESC-Temperatur unkritisch', ob3);
+    }
+    // ---------- Antrieb ----------
+    var mo = m.mot;
+    if (mo) {
+      var ob4 = 'Motor-Ausgang im stabilen Flug im Mittel ' + f1(mo.mean) + ' % (mittlere Reserve ' + f1(mo.reserve) + ' %), Spitze ' + f1(mo.peak) + ' % bei ' + f0(mo.t_peak) + ' s, ' + f1(mo.near) + ' % der Zeit ueber 95 % (Quelle: ' + mo.src + ').';
+      if (mo.near >= 10 || mo.peak >= 99) add('warn', 'Antrieb', 'Antrieb am Limit', ob4, 'Der Governor verlangt mehr Leistung als der Antrieb liefert: Uebersetzung/Ritzel, Motor, Akku (Spannung/Strom) oder Headspeed pruefen.');
+      else if (mo.near >= 2 || mo.reserve < 20) add('hint', 'Antrieb', 'Wenig Leistungsreserve', ob4, 'Reserve beobachten; bei Drehzahleinbruechen unter Last Uebersetzung/Akku pruefen.');
+      else add('ok', 'Antrieb', 'Gesunde Leistungsreserve', ob4);
+    }
+    // ---------- Servos ----------
+    var bad = [], names = { 0: 'Servo 1', 1: 'Servo 2', 2: 'Servo 3', 3: 'Heck-Servo/Servo 4' };
+    Object.keys(m.servo).forEach(function (k) { var s = m.servo[k], w = Math.max(s.pct_lo, s.pct_hi); if (w >= T.servo_limit_pct_warn) bad.push([k, w]); });
+    if (bad.length) add('warn', 'Servos', 'Servo laeuft laenger am Endanschlag', bad.map(function (b) { return names[b[0]] + ': ' + f1(b[1]) + ' % der Zeit'; }).join(', '), 'Servoweg/Mixer-Limits, Taumelscheiben-Geometrie und Kollektiv-Range pruefen; beim Heck: Hebelarm/Weg und Yaw-Gain.');
+    else { var mx = 0; Object.keys(m.servo).forEach(function (k) { mx = Math.max(mx, m.servo[k].pct_lo, m.servo[k].pct_hi); }); add('ok', 'Servos', 'Kein Servo dauerhaft am Anschlag', 'Hoechster Wert: ' + f2(mx) + ' % der Zeit am Anschlag.'); }
+    // ---------- Hover ----------
+    if (m.hover_peaks.length) {
+      var pk = m.hover_peaks.slice(0, 3).map(function (p) { return p[0] + ' ' + f1(p[1]) + ' Hz (' + f1(p[2]) + 'x ueber Grundpegel)'; }).join(', ');
+      add('hint', 'Hover', 'Deutlicher Resonanzpeak im Schwebeflug', 'Bei ruhigen Sticks hebt sich im Gyro-Spektrum eine klare Spitze ab: ' + pk + '.',
+        'Eine echte Resonanz zeigt sich als Spitze, nicht als glatter Anstieg zu tiefen Frequenzen. Tritt sie bei gleicher Frequenz in mehreren Fluegen auf, ist die Mechanik (Lager, Spiel, Blattspurlauf, Rahmen) der erste Verdaechtige.');
+    } else if (fin(m.wobble)) {
+      add('ok', 'Hover', 'Kein Resonanzpeak im Schwebeflug', 'Das Gyro-Spektrum bei ruhigen Sticks faellt glatt ab, ohne herausragende Spitze (Eigenbewegung im Band 2-8 Hz: ' + f1(m.wobble) + ' deg/s RMS). Das ist normale Flugbewegung/Wind, keine Resonanz.');
+    }
+    // ---------- Signal ----------
+    var sig = [];
+    if (m.rx_loss > 0) sig.push(m.rx_loss + ' Samples ohne Empfaengersignal im Flug');
+    if (m.failsafe_active) sig.push('Failsafe war im Flug aktiv');
+    if (m.v_zero > 0) sig.push(m.v_zero + ' Samples mit Spannung 0 (Telemetrie-Aussetzer)');
+    if (sig.length) add('warn', 'Signal', 'Funk-/Telemetrieprobleme', sig.join('; '), 'Antennenposition, Empfaengerversorgung, Telemetrie-Verkabelung pruefen.');
+    else add('ok', 'Signal', 'Funk und Telemetrie sauber', 'Keine Empfaengeraussetzer, kein Failsafe, keine Spannungs-Nullwerte.');
+    if (m.escthr_dead && !m.mot) add('info', 'Antrieb', 'Kein Gas-Wert im Log', 'Weder der ESC noch der Flugregler (motor[0]) liefern einen Gas-Wert, daher ist keine Aussage zur Leistungsreserve moeglich.');
+    return F;
+  }
+  function overallState(F) { var s = 3; F.forEach(function (f) { s = Math.min(s, SEV_ORDER[f.sev]); }); return { 0: 'warn', 1: 'hint', 2: 'ok', 3: 'ok' }[s]; }
+
+  function makePidRecommendations(m) {
+    var hdr = m.hdr || {}, recs = [], roll = A.pidParts(hdr.rollPID), pitch = A.pidParts(hdr.pitchPID), yaw = A.pidParts(hdr.yawPID), gov = A.pidParts(hdr.govPID);
+    function rv(v) { return Math.round(v); }
+    function adj(v, d) { return (isNaN(v)) ? null : Math.max(0, Math.round(v + d)); }
+    var track = m.track || {};
+    [['Roll', roll, 'roll'], ['Nick', pitch, 'pitch'], ['Gier', yaw, 'yaw']].forEach(function (ax) {
+      var axis = ax[0], pid = ax[1], pfx = ax[2];
+      if (!track[axis]) return;
+      var med = track[axis][0], p95 = track[axis][1], n = track[axis][2], D = pid[2], Fv = pid[3], cli = [], obs;
+      if (med > 80 || p95 > 200) {
+        obs = 'Regelabweichung ' + axis + ': Median ' + f0(med) + ' deg/s, 95-%-Wert ' + f0(p95) + ' deg/s (' + n + ' Samples). Beides deutlich erhoeht: Feedforward zu schwach oder D zu niedrig.';
+        if (!isNaN(Fv)) cli.push('set ' + pfx + '_f_gain = ' + adj(Fv, Math.max(5, Math.round(Fv * 0.15))) + '  # war ' + rv(Fv) + ', +15 % - Feedforward staerken');
+        if (!isNaN(D) && D >= 5) cli.push('set ' + pfx + '_d_gain = ' + adj(D, Math.max(3, Math.round(D * 0.10))) + '  # war ' + rv(D) + ', +10 % - Daempfung erhoehen');
+      } else if (p95 > 120) {
+        obs = 'Regelabweichung ' + axis + ': Median ' + f0(med) + ' deg/s (OK), 95-%-Wert ' + f0(p95) + ' deg/s erhoeht (' + n + ' Samples). Spitzen deuten auf schwaches Feedforward hin.';
+        if (!isNaN(Fv)) cli.push('set ' + pfx + '_f_gain = ' + adj(Fv, Math.max(3, Math.round(Fv * 0.10))) + '  # war ' + rv(Fv) + ', +10 % - Feedforward leicht staerken');
+      } else return;
+      recs.push({ area: 'PID ' + axis, title: axis + ': Feedforward/D-Gain anpassen', obs: obs, cli: cli });
+    });
+    var g = m.gov || {};
+    if (g.rate !== undefined && g.p01 < -60) {
+      var P = gov[0], Fv2 = gov[3], cli2 = [];
+      if (!isNaN(Fv2)) cli2.push('set gov_f_gain = ' + adj(Fv2, Math.max(5, Math.round(Fv2 * 0.12))) + '  # war ' + rv(Fv2) + ', +12 % - Last-Vorsteuerung staerken');
+      if (!isNaN(P)) cli2.push('set gov_p_gain = ' + adj(P, Math.max(3, Math.round(P * 0.10))) + '  # war ' + rv(P) + ', +10 % - falls F allein nicht reicht');
+      recs.push({ area: 'PID Governor', title: 'Governor-Droop: Gain erhoehen', obs: 'Governor: 1-%-Wert der Drehzahlabweichung ' + f0(g.p01) + ' U/min unter Ziel (' + f0(m.target) + ' U/min). Einbrechen unter Last deutet auf zu niedrigen Governor-Gain oder Vorsteuerung (F-Gain / Precomp).', cli: cli2 });
+    }
+    if (g.rate !== undefined && g.p99 > T.over_p99_hint) {
+      var F3 = gov[3], cli3 = [];
+      if (!isNaN(F3) && g.p99 > T.over_p99_hint * 1.5) cli3.push('set gov_f_gain = ' + adj(F3, -Math.max(3, Math.round(F3 * 0.10))) + '  # war ' + rv(F3) + ', -10 % - Vorsteuerung zuruecknehmen');
+      recs.push({ area: 'PID Governor', title: 'Governor-Ueberschwingen: Gain reduzieren', obs: 'Governor: 99-%-Wert der Drehzahlabweichung +' + f0(g.p99) + ' U/min ueber Ziel. Ueberschwingen nach Lastabnahme - Governor-F-Gain oder Vorsteuerung zu hoch.', cli: cli3 });
+    }
+    var y = m.yaw || {};
+    if ((y.max || 0) >= T.yaw_spike_hint && (y.ratio || 0) >= T.yaw_axis_ratio) {
+      var Py = yaw[0], cli4 = [];
+      if (!isNaN(Py)) { var d = -Math.max(3, Math.round(Py * 0.12)); cli4.push('set yaw_p_gain = ' + Math.max(5, Math.round(Py + d)) + '  # war ' + rv(Py) + ', ' + (d >= 0 ? '+' : '') + d + ' - Yaw-P senken'); }
+      var sg = parseFloat(hdr.yaw_stop_gain); if (!isNaN(sg)) cli4.push('set yaw_stop_gain = ' + Math.max(5, Math.round(sg * 0.88)) + '  # war ' + Math.trunc(sg) + ', -12 % - Stop-Gain senken');
+      recs.push({ area: 'PID Heck', title: 'Yaw-P/Stop-Gain senken', obs: 'Heck-Schwingung bei ruhigem Stick: Maximum ' + f0(y.max) + ', Spitze bei ' + f1(y.f_max || 0) + ' Hz, achsenspezifisch (Yaw-Achse ' + f1(y.ratio || 0) + 'x staerker). Typisches Zeichen fuer zu hohes Yaw-P oder Yaw-Stop-Gain.', cli: cli4 });
+    }
+    var main = (m.target || 0) / 60;
+    (m.hover_peaks || []).slice(0, 3).forEach(function (p) {
+      var lab = p[0], freq = p[1], prom = p[2], cause, action, cli = [];
+      var near1 = main > 0 && Math.abs(freq - main) <= 4, near2 = main > 0 && Math.abs(freq - 2 * main) <= 4;
+      if (near1) { cause = 'nahe 1/rev des Hauptrotors (' + f1(main) + ' Hz bei ' + f0(m.target) + ' U/min) - typisch fuer Rotor-Unwucht oder Spurlauf-Fehler'; action = 'Zuerst Mechanik: Blatt-/Kopf-Wucht pruefen, dann erneut fliegen. Ist der Peak nach der Wuchtung weg, ist kein Filter noetig. Bleibt er: RPM-Filter auf diesen Bereich einstellen.'; }
+      else if (near2) { cause = 'nahe 2/rev des Hauptrotors (' + f1(2 * main) + ' Hz) - kann Spurlauf-Fehler oder Taumelscheiben-Asymmetrie sein'; action = 'Spurlauf aller Blaetter ueberpruefen, dann Wucht-Test.'; }
+      else if (freq >= 20 && freq <= 200) { cause = 'moeglicherweise Motorfrequenz oder Getriebe-Harmonie bei ' + f1(freq) + ' Hz'; action = 'Notch-Filter bei dieser Frequenz erwaegen: gyro_notch1_hz oder dyn_notch_min_hz pruefen. Erst Quelle identifizieren (drehzahlabhaengig?), dann filtern.';
+        cli = ['# Vorschlag: Notch-Filter bei ' + f0(freq) + ' Hz (Q=3) - erst Ursache pruefen!', 'set gyro_notch1_hz = ' + Math.round(freq), 'set gyro_notch1_cutoff = ' + Math.round(freq / (1 + 1 / 3))]; }
+      else return;
+      recs.push({ area: 'Filter', title: 'Peak bei ' + f1(freq) + ' Hz (' + lab + ')', obs: 'Gyro-Spektrum-Peak (' + lab + ') bei ' + f1(freq) + ' Hz, ' + f1(prom) + 'x ueber Grundpegel. Ursache: ' + cause + '. ' + action, cli: cli });
+    });
+    return recs;
+  }
+  var api = { makeFindings: makeFindings, overallState: overallState, makePidRecommendations: makePidRecommendations, SEV_ORDER: SEV_ORDER, SEV_LABEL: SEV_LABEL };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFF = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Vibrationsanalyse: Welch-Spektrum von Roh- und gefiltertem Gyro, Drehzahl-Harmonische, Filter-Empfehlungen */
+(function (root) {
+  'use strict';
+  var A = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./analysis.js') : root.RFA, U = A.util;
+  var median = U.median, fin = U.fin;
+  var f0 = function (x) { return x.toFixed(0); }, f1 = function (x) { return x.toFixed(1); };
+  var AX = ['Roll', 'Nick', 'Gier'];
+  var VT = { lvl_hint: 4, lvl_warn: 10, peak_prom: 6, peak_amp: 1.0, att_good: 15, att_poor: 10, stable_pct: 0.04, unbal_amp: 8 };
+
+  // ---- FFT (Radix-2) ----
+  var _fft = {};
+  function fftTab(N) {
+    if (_fft[N]) return _fft[N];
+    var c = new Float64Array(N / 2), s = new Float64Array(N / 2), rev = new Uint32Array(N), bits = Math.log2(N), i;
+    for (i = 0; i < N / 2; i++) { c[i] = Math.cos(2 * Math.PI * i / N); s[i] = -Math.sin(2 * Math.PI * i / N); }
+    for (i = 0; i < N; i++) { var r = 0, x = i; for (var b = 0; b < bits; b++) { r = (r << 1) | (x & 1); x >>= 1; } rev[i] = r; }
+    return (_fft[N] = { c: c, s: s, rev: rev });
+  }
+  function fft(re, im) {
+    var N = re.length, T = fftTab(N), i, j, k, len, half, step, t;
+    for (i = 0; i < N; i++) { j = T.rev[i]; if (j > i) { t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (len = 2; len <= N; len <<= 1) {
+      half = len >> 1; step = N / len;
+      for (i = 0; i < N; i += len) for (k = 0; k < half; k++) {
+        var wr = T.c[k * step], wi = T.s[k * step], a = i + k, b = a + half;
+        var xr = re[b] * wr - im[b] * wi, xi = re[b] * wi + im[b] * wr;
+        re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+      }
+    }
+  }
+  // einseitige Leistungsdichte eines Fensters (Hann, Mittelwert entfernt)
+  function psd(y, off, N, fs, w, U2, re, im, out) {
+    var i, mean = 0; for (i = 0; i < N; i++) mean += y[off + i]; mean /= N;
+    for (i = 0; i < N; i++) { re[i] = (y[off + i] - mean) * w[i]; im[i] = 0; }
+    fft(re, im);
+    var h = N / 2, sc = 2 / (fs * U2);
+    for (var k = 0; k <= h; k++) out[k] = (re[k] * re[k] + im[k] * im[k]) * sc * ((k === 0 || k === h) ? 0.5 : 1);
+  }
+  function bandRms(P, df, lo, hi) { var s = 0; for (var k = 1; k < P.length; k++) { var f = k * df; if (f >= lo && f < hi) s += P[k] * df; } return Math.sqrt(s); }
+  function localBase(P, j) {
+    var a = []; for (var d = 3; d <= 12; d++) { if (j - d >= 1) a.push(P[j - d]); if (j + d < P.length) a.push(P[j + d]); }
+    return Math.max(median(a), 1e-12);
+  }
+  function parseHdrNums(s) { return String(s === undefined ? '' : s).split(',').map(function (x) { return parseFloat(x); }); }
+
+  function analyze(m) {
+    var V = { ok: false }, fl = m.fl, fs = m.fs, hdr = m.hdr || {}, i, k;
+    if (!fl || !m.ok) return V;
+    var raw = [fl.cols['gyroRAW[0]'], fl.cols['gyroRAW[1]'], fl.cols['gyroRAW[2]']], adc = [fl.cols['gyroADC[0]'], fl.cols['gyroADC[1]'], fl.cols['gyroADC[2]']];
+    var hasRaw = !!(raw[0] && raw[1] && raw[2]), hasAdc = !!(adc[0] && adc[1] && adc[2]);
+    if (!hasAdc && !hasRaw) { V.error = 'Keine Gyro-Daten im Log.'; return V; }
+    if (!hasAdc) adc = raw;
+    var N = Math.max(256, Math.min(2048, Math.pow(2, Math.round(Math.log2(fs))))), n = fl.n;
+    if (n < N * 3) { V.error = 'Flugphase zu kurz fuer eine Spektralanalyse.'; return V; }
+    var hsA = fl.get('headspeed'), hsv = []; for (i = 0; i < n; i++) if (hsA[i] > 50) hsv.push(hsA[i]);
+    var hsMed = hsv.length ? median(hsv) : m.target, fh = hsMed / 60, df = fs / N, h = N / 2;
+    var w = new Float64Array(N), U2 = 0; for (i = 0; i < N; i++) { w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1)); U2 += w[i] * w[i]; }
+    var re = new Float64Array(N), im = new Float64Array(N), tmp = new Float64Array(h + 1);
+    var accR = [0, 1, 2].map(function () { return new Float64Array(h + 1); }), accA = [0, 1, 2].map(function () { return new Float64Array(h + 1); });
+    var nWin = 0, hop = N >> 1, tt = [], lvR = [], lvA = [], lvH = [];
+    var hi = Math.max(20, 0), t = fl.t;
+    for (var s0 = 0; s0 + N <= n; s0 += hop) {
+      var hsAvg = 0, stable = true; for (i = s0; i < s0 + N; i++) { hsAvg += hsA[i]; if (Math.abs(hsA[i] - hsMed) > VT.stable_pct * hsMed) stable = false; } hsAvg /= N;
+      var pr = 0, pa = 0;
+      for (k = 0; k < 3; k++) {
+        if (hasRaw) { psd(raw[k], s0, N, fs, w, U2, re, im, tmp); if (stable) for (i = 0; i <= h; i++) accR[k][i] += tmp[i]; var r = bandRms(tmp, df, 20, 1e9); pr += r * r; }
+        psd(adc[k], s0, N, fs, w, U2, re, im, tmp); if (stable) for (i = 0; i <= h; i++) accA[k][i] += tmp[i]; var a = bandRms(tmp, df, 20, 1e9); pa += a * a;
+      }
+      tt.push(t[s0 + (N >> 1)]); lvR.push(hasRaw ? Math.sqrt(pr / 3) : NaN); lvA.push(Math.sqrt(pa / 3)); lvH.push(hsAvg);
+      if (stable) nWin++;
+    }
+    if (nWin < 6) { V.error = 'Zu wenig Phasen mit stabiler Drehzahl fuer eine Spektralanalyse (' + nWin + ').'; return V; }
+    for (k = 0; k < 3; k++) for (i = 0; i <= h; i++) { accR[k][i] /= nWin; accA[k][i] /= nWin; }
+    var nyq = fs / 2;
+    V = { ok: true, fs: fs, N: N, df: df, nyq: nyq, nWin: nWin, fh: fh, hs: hsMed, hasRaw: hasRaw, psdR: hasRaw ? accR : null, psdA: accA,
+      lvl: { t: Float64Array.from(tt), raw: Float64Array.from(lvR), adc: Float64Array.from(lvA), hs: Float64Array.from(lvH) } };
+    // Pegel je Achse / Band
+    var edges = [0, 20, 60, 120, 250, 1e9], bands = [];
+    for (i = 0; i < edges.length - 1; i++) if (edges[i] < nyq - df) bands.push([edges[i], Math.min(edges[i + 1], nyq)]);
+    V.bands = bands;
+    V.rmsA = accA.map(function (P) { return bands.map(function (b) { return bandRms(P, df, b[0], b[1] + 1e-9); }); });
+    V.rmsR = hasRaw ? accR.map(function (P) { return bands.map(function (b) { return bandRms(P, df, b[0], b[1] + 1e-9); }); }) : null;
+    V.hfA = accA.map(function (P) { return bandRms(P, df, 20, 1e9); });
+    V.hfR = hasRaw ? accR.map(function (P) { return bandRms(P, df, 20, 1e9); }) : null;
+    // Filter-Einstellungen
+    var lp1t = parseFloat(hdr.gyro_lpf1_type), lp1 = parseFloat(hdr.gyro_lpf1_static_hz), lp2 = parseFloat(hdr.gyro_lpf2_static_hz);
+    V.set = { lpf1_type: lp1t, lpf1: lp1, lpf2: lp2, dn_count: parseFloat(hdr.dyn_notch_count), dn_q: parseFloat(hdr.dyn_notch_q), dn_min: parseFloat(hdr.dyn_notch_min_hz), dn_max: parseFloat(hdr.dyn_notch_max_hz),
+      rpm_preset: parseFloat(hdr.gyro_rpm_notch_preset), rpm_src: parseHdrNums(hdr.gyro_rpm_notch_source_pitch).filter(function (x) { return x > 0; }).length };
+    V.lp_on = fin(lp1) && lp1 > 0 && lp1t > 0;
+    // Spitzen: im Rohsignal (falls vorhanden) sonst im gefilterten
+    var base = hasRaw ? accR : accA, cand = [], j;
+    for (k = 0; k < 3; k++) {
+      var P = base[k];
+      for (j = Math.ceil(15 / df); j < h - 1; j++) {
+        if (!(P[j] >= P[j - 1] && P[j] >= P[j + 1])) continue;
+        var prom = P[j] / localBase(P, j);
+        if (prom >= VT.peak_prom) cand.push({ ax: k, j: j, prom: prom, p: P[j] });
+      }
+    }
+    cand.sort(function (a, b) { return b.p - a.p; });
+    var peaks = [];
+    cand.forEach(function (c) {
+      for (var q = 0; q < peaks.length; q++) if (Math.abs(peaks[q].j - c.j) <= 2) { peaks[q].axes[c.ax] = true; return; }
+      var ax = [false, false, false]; ax[c.ax] = true; peaks.push({ j: c.j, f: c.j * df, axis: c.ax, axes: ax, prom: c.prom });
+    });
+    var amp = function (P, j) { return Math.sqrt((P[j - 1] + P[j] + P[j + 1]) * df); };
+    peaks.forEach(function (p) {
+      var jj = p.j;
+      p.ampR = hasRaw ? Math.max(amp(accR[0], jj), amp(accR[1], jj), amp(accR[2], jj)) : NaN;
+      p.ampA = Math.max(amp(accA[0], jj), amp(accA[1], jj), amp(accA[2], jj));
+      var pk = p.axis; p.ampRax = hasRaw ? amp(accR[pk], jj) : NaN; p.ampAax = amp(accA[pk], jj);
+      p.att = hasRaw ? 20 * Math.log10(Math.max(p.ampRax, 1e-9) / Math.max(p.ampAax, 1e-9)) : NaN;
+      var nn = p.f / fh, nr = Math.round(nn), tol = Math.max(1.5 * df, 0.02 * p.f);
+      p.n = (nr >= 1 && nr <= 12 && Math.abs(p.f - nr * fh) <= tol) ? nr : 0;
+      p.nfrac = nn;
+      p.over_lpf = V.lp_on && p.f > 1.6 * lp1;
+      p.in_dyn = fin(V.set.dn_min) && fin(V.set.dn_max) && V.set.dn_count > 0 && p.f >= V.set.dn_min && p.f <= V.set.dn_max;
+    });
+    peaks.sort(function (a, b) { return (hasRaw ? b.ampR - a.ampR : b.ampA - a.ampA); });
+    V.peaks = peaks.slice(0, 12);
+    return V;
+  }
+
+  // ---- Befunde ----
+  function findings(V, m) {
+    var F = [];
+    function add(sev, title, obs, todo) { F.push({ sev: sev, area: 'Vibration', title: title, obs: obs, todo: todo || '' }); }
+    if (!V || !V.ok) { if (V && V.error) add('info', 'Vibrationsanalyse nicht moeglich', V.error, ''); return F; }
+    var S = V.set, lim = 'Das Log enthaelt Frequenzen bis ' + f0(V.nyq) + ' Hz (Abtastrate ' + f0(V.fs) + ' Hz).';
+    if (V.fs < 1000) add('info', 'Log-Rate begrenzt die Analyse', lim + ' Schwingungen darueber sind nicht sichtbar, und Rohsignal-Spitzen oberhalb von ca. ' + f0(V.nyq * 0.6) + ' Hz koennen Spiegelfrequenzen (Aliasing) sein.',
+      'Fuer eine genaue Filter-Abstimmung die Blackbox-Abtastrate im Rotorflight Configurator (Reiter Blackbox) auf mindestens 1 kHz erhoehen und einen ruhigen Schwebeflug von ca. 30 s loggen.');
+    if (!V.hasRaw) add('info', 'Kein ungefiltertes Gyro im Log', 'Es wird nur das gefilterte Gyro ausgewertet. Damit sind nur uebrig gebliebene Schwingungen sichtbar, nicht deren Ursache und die Wirkung der Filter.',
+      'Im Configurator (Blackbox) das ungefilterte Gyro (gyroRAW) mitloggen, falls die Option vorhanden ist.');
+    // Gesamtpegel (gefiltert, > 20 Hz)
+    var wi = 0; V.hfA.forEach(function (x, i) { if (x > V.hfA[wi]) wi = i; });
+    var lv = V.hfA[wi], sev = lv >= VT.lvl_warn ? 'warn' : lv >= VT.lvl_hint ? 'hint' : 'ok';
+    var lvTxt = V.hfA.map(function (x, i) { return AX[i] + ' ' + f1(x); }).join(', ');
+    add(sev, sev === 'ok' ? 'Restvibration nach den Filtern niedrig' : 'Restvibration nach den Filtern erhoeht',
+      'Verbleibende Vibration im gefilterten Gyro oberhalb 20 Hz (Effektivwert in deg/s): ' + lvTxt + '. Schwerpunkt: ' + AX[wi] + '. (Richtwerte: unter ' + VT.lvl_hint + ' ruhig, ab ' + VT.lvl_hint + ' Hinweis, ab ' + VT.lvl_warn + ' deutlich.)' +
+      (V.hasRaw ? ' Vor den Filtern lag der Pegel bei ' + V.hfR.map(function (x, i) { return AX[i] + ' ' + f1(x); }).join(', ') + '.' : ''),
+      sev === 'ok' ? '' : 'Zuerst die Mechanik pruefen (Blattspur und -gewicht, Rotorkopf-Spiel, Lager, Zahnraeder, Heckrotor, lockere Anbauteile), erst danach die Filter verschaerfen - Filter verdecken Probleme und kosten Phase.');
+    // Filterwirkung
+    if (V.hasRaw) {
+      var att = V.hfR.map(function (r, i) { return 20 * Math.log10(Math.max(r, 1e-9) / Math.max(V.hfA[i], 1e-9)); });
+      add('info', 'Filterwirkung', 'Die Filter daempfen die Vibration oberhalb 20 Hz um ' + att.map(function (a, i) { return AX[i] + ' ' + f0(a) + ' dB'; }).join(', ') + ' (6 dB = halbe Amplitude, 20 dB = ein Zehntel).' +
+        (fin(S.lpf1) && S.lpf1 > 0 ? ' Aktiv: Tiefpass 1 bei ' + f0(S.lpf1) + ' Hz' + (S.lpf2 > 0 ? ', Tiefpass 2 bei ' + f0(S.lpf2) + ' Hz' : '') : '') +
+        (S.dn_count > 0 ? ', dynamischer Notch (' + f0(S.dn_count) + ' Stueck, ' + f0(S.dn_min) + '-' + f0(S.dn_max) + ' Hz, Q ' + f0(S.dn_q) + ')' : '') + (S.rpm_preset > 0 ? ', RPM-Filter (' + f0(S.rpm_src) + ' Quellen)' : '') + '.', '');
+    }
+    // Spitzen
+    var P = V.peaks.filter(function (p) { return (V.hasRaw ? p.ampR : p.ampA) >= VT.peak_amp; }), shown = 0, good = 0;
+    P.forEach(function (p) {
+      var cls = p.n ? (p.n + 'P (Hauptrotor-Drehzahl x ' + p.n + ')') : 'feste Frequenz, nicht an die Kopfdrehzahl gekoppelt', axs = AX.filter(function (a, i) { return p.axes[i]; }).join('/');
+      var res = p.ampA >= VT.peak_amp && p.prom > 0, goodAtt = V.hasRaw && p.att >= VT.att_good;
+      if (V.hasRaw && goodAtt) { good++; return; }
+      if (shown >= 4) return; shown++;
+      var ob = 'Spitze bei ' + f1(p.f) + ' Hz (' + axs + ') - ' + cls + '. ' + (V.hasRaw ? 'Roh ' + f1(p.ampR) + ' deg/s, nach den Filtern ' + f1(p.ampA) + ' deg/s (Daempfung ' + f0(p.att) + ' dB).' : 'Amplitude ' + f1(p.ampA) + ' deg/s.');
+      var sv = (p.ampA >= 3 && !p.over_lpf) ? 'hint' : 'info';
+      var todo = '';
+      if (p.over_lpf) todo = 'Liegt klar oberhalb des Tiefpasses (' + f0(S.lpf1) + ' Hz) und wird davon gedaempft - keine Filteraenderung noetig.';
+      else if (p.n) todo = 'Drehzahlgekoppelte Spitze: der RPM-Filter sollte sie erfassen. Im Configurator (Filter) pruefen, ob die ' + p.n + '. Harmonische des Hauptrotors abgedeckt ist ' + (S.rpm_src > 0 ? '(aktuell ' + f0(S.rpm_src) + ' RPM-Filter-Quellen) ' : '') + ' und deren Q-Wert verringern (breiterer Notch).' + (p.n === 1 && (V.hasRaw ? p.ampR >= VT.unbal_amp : p.ampA >= 3) ? ' Starke 1P-Spitze deutet zusaetzlich auf Unwucht oder Blattspur-Fehler hin: Blaetter wiegen/spuren, Rotorkopf pruefen.' : '');
+      else todo = 'Feste Frequenz: typisch Resonanz (Heckrohr, Rahmen, Servohalter) oder Motor/Getriebe/Heckrotor. Test: Kopfdrehzahl aendern - wandert die Spitze mit, ist sie drehzahlgekoppelt, sonst eine Resonanz. ' + (p.in_dyn ? 'Sie liegt im Bereich des dynamischen Notch (' + f0(S.dn_min) + '-' + f0(S.dn_max) + ' Hz): Anzahl der Notches erhoehen.' : S.dn_count > 0 ? 'Sie liegt ausserhalb des dynamischen Notch-Bereichs (' + f0(S.dn_min) + '-' + f0(S.dn_max) + ' Hz): Bereich erweitern.' : 'Ein dynamischer Notch ist nicht aktiv: aktivieren (dyn_notch_count).');
+      add(sv, 'Spitze bei ' + f1(p.f) + ' Hz' + (p.n ? ' (' + p.n + 'P)' : ''), ob, todo);
+    });
+    if (V.hasRaw && good) add('ok', good + ' Spitze' + (good > 1 ? 'n' : '') + ' im Rohsignal gut ausgefiltert', 'Diese Frequenzen sind im Rohsignal sichtbar, werden aber um mindestens ' + VT.att_good + ' dB gedaempft - die Filter arbeiten hier wie vorgesehen.', '');
+    if (!P.length) add('ok', 'Keine auffaelligen Spitzen', 'Im Spektrum gibt es keine deutlichen Einzelspitzen oberhalb von 15 Hz.', '');
+    return F;
+  }
+
+  // ---- Filter-Empfehlungen (mit CLI, falls Parameter im Header bekannt) ----
+  function recommendations(V, m) {
+    var R = [];
+    if (!V || !V.ok) return R;
+    var S = V.set, hf = Math.max.apply(null, V.hfA), peaks = V.peaks.filter(function (p) { return (V.hasRaw ? p.ampR : p.ampA) >= VT.peak_amp; });
+    var resid = peaks.filter(function (p) { return !p.over_lpf && p.ampA >= 2.5 && (!V.hasRaw || p.att < VT.att_poor); });
+    resid.slice(0, 2).forEach(function (p) {
+      if (p.n) R.push({ area: 'Filter', title: 'RPM-Filter ' + p.n + 'P schaerfen (' + f1(p.f) + ' Hz)', obs: 'Die ' + p.n + '. Harmonische der Kopfdrehzahl bleibt nach den Filtern mit ' + f1(p.ampA) + ' deg/s uebrig' + (V.hasRaw ? ' (nur ' + f0(p.att) + ' dB gedaempft).' : '.'),
+        cli: [], note: 'Rotorflight Configurator > Filter > RPM-Filter: die Quelle fuer diese Harmonische aktivieren bzw. ihren Q-Wert um etwa ein Drittel senken. Ein Parameter pro Flug.' });
+      else if (S.dn_count > 0 && p.in_dyn && S.dn_count < 8) R.push({ area: 'Filter', title: 'Dynamischen Notch erweitern (' + f1(p.f) + ' Hz)', obs: 'Feste Spitze bei ' + f1(p.f) + ' Hz bleibt mit ' + f1(p.ampA) + ' deg/s uebrig, obwohl sie im Notch-Bereich liegt.', cli: ['set dyn_notch_count = ' + (S.dn_count + 1)] });
+      else if (S.dn_count > 0 && !p.in_dyn && fin(S.dn_min)) R.push({ area: 'Filter', title: 'Notch-Bereich anpassen (' + f1(p.f) + ' Hz)', obs: 'Feste Spitze bei ' + f1(p.f) + ' Hz liegt ausserhalb des dynamischen Notch-Bereichs (' + f0(S.dn_min) + '-' + f0(S.dn_max) + ' Hz).',
+        cli: [p.f > S.dn_max ? 'set dyn_notch_max_hz = ' + Math.min(Math.ceil((p.f + 20) / 10) * 10, V.nyq > 0 ? Math.floor(V.nyq / 10) * 10 + 200 : 400) : 'set dyn_notch_min_hz = ' + Math.max(Math.floor((p.f - 10) / 10) * 10, 10)] });
+      else if (!(S.dn_count > 0)) R.push({ area: 'Filter', title: 'Dynamischen Notch aktivieren (' + f1(p.f) + ' Hz)', obs: 'Feste Spitze bei ' + f1(p.f) + ' Hz bleibt ungefiltert (' + f1(p.ampA) + ' deg/s).', cli: ['set dyn_notch_count = 2'] });
+    });
+    // Tiefpass-Reserve bzw. Verschaerfung
+    if (V.lp_on && fin(S.lpf1)) {
+      var up = Math.round(S.lpf1 / 10) * 10 + 20, H = function (f, fc) { return 1 / Math.sqrt(1 + (f / fc) * (f / fc)); };
+      var pred = V.psdA.map(function (P) { var s = 0; for (var k = 1; k < P.length; k++) { var f = k * V.df; if (f >= 20) { var r = H(f, up) / H(f, S.lpf1); s += P[k] * r * r * V.df; } } return Math.sqrt(s); }), pMax = Math.max.apply(null, pred);
+      if (pMax < Math.min(3, VT.lvl_hint * 0.75) && S.lpf1 <= 140 && !resid.length && V.nyq > S.lpf1 * 1.4)
+        R.push({ area: 'Filter', title: 'Tiefpass 1 kann etwas hoeher (weniger Verzoegerung)', obs: 'Die Restvibration ist niedrig (' + f1(hf) + ' deg/s). Mit ' + f0(up) + ' Hz statt ' + f0(S.lpf1) + ' Hz ergibt eine Abschaetzung aus dem Spektrum nur ' + f1(pMax) + ' deg/s. Ein hoeherer Grenzwert verringert die Signalverzoegerung und kann die Regelung straffen.',
+          cli: ['set gyro_lpf1_static_hz = ' + up], note: 'Nur testweise und einen Schritt pro Flug: danach Servos (Temperatur, Geraeusch) und Heck beobachten und die Restvibration erneut vergleichen. Das Log reicht nur bis ' + f0(V.nyq) + ' Hz - Anteile darueber sind nicht beurteilbar.' });
+      else if (hf >= VT.lvl_warn && !peaks.length && S.lpf1 >= 60)
+        R.push({ area: 'Filter', title: 'Breitband-Vibration: Tiefpass 1 senken oder Ursache suchen', obs: 'Die Restvibration ist erhoeht (' + f1(hf) + ' deg/s) ohne einzelne Spitzen - typisch fuer ein breites Rauschen (Lager, Zahnraeder, Servos, Verkabelung).',
+          cli: ['set gyro_lpf1_static_hz = ' + (Math.round(S.lpf1 / 10) * 10 - 20)], note: 'Eine Senkung erhoeht die Verzoegerung. Besser zuerst die mechanische Ursache beseitigen.' });
+    }
+    // Unwucht (1P) unabhaengig von den Filtern
+    peaks.filter(function (p) { return p.n === 1 && (V.hasRaw ? p.ampR >= VT.unbal_amp : p.ampA >= 3); }).slice(0, 1).forEach(function (p) {
+      R.push({ area: 'Mechanik', title: 'Starke 1P-Vibration (' + f1(p.f) + ' Hz): Unwucht oder Blattspur', obs: 'Die Grundfrequenz des Hauptrotors ist mit ' + f1(V.hasRaw ? p.ampR : p.ampA) + ' deg/s deutlich ausgepraegt. Das ist keine Filter-, sondern eine Mechanik-Frage; Filter blenden sie nur aus.',
+        cli: [], note: 'Blaetter auf gleiches Gewicht und gleichen Schwerpunkt pruefen, Blattspur kontrollieren, Rotorkopf/Blatthalter auf Spiel, Hauptwelle und Lager pruefen.' });
+    });
+    return R;
+  }
+  var api = { analyze: analyze, findings: findings, recommendations: recommendations, VT: VT, AX: AX };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFV = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Governor-Abstimmung (interner Rotorflight-Governor): Anteile, Lastwechsel-Reaktion, Empfehlungen */
+(function (root) {
+  'use strict';
+  var A = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./analysis.js') : root.RFA, U = A.util, T = A.THRESH;
+  var median = U.median, fin = U.fin, pctl = U.percentile;
+  var f0 = function (x) { return x.toFixed(0); }, f1 = function (x) { return x.toFixed(1); };
+  var GT = { ev_min: 8, err_hint: 15, rec_slow: 0.6, offset: 8, dip_p01: -60 };
+
+  function moments(a, idx) { var s = 0, s2 = 0, c = 0; for (var k = 0; k < idx.length; k++) { var v = a[idx[k]]; if (v === v) { s += v; s2 += v * v; c++; } } if (!c) return { mean: NaN, std: NaN }; var mu = s / c; return { mean: mu, std: Math.sqrt(Math.max(0, s2 / c - mu * mu)) }; }
+
+  function analyze(m) {
+    var G = { ok: false, internal: null }, fl = m.fl, fs = m.fs, hdr = m.hdr || {}, i;
+    if (!fl || !m.ok) return G;
+    G.gains = A.pidParts(hdr.govPID);
+    var need = ['govSum', 'govP', 'govI', 'govD', 'govF'];
+    if (!need.every(function (k) { return fl.has(k); })) { G.reason = 'Die Governor-Anteile (govP, govI, ...) sind im Log nicht enthalten.'; return G; }
+    var sum = fl.get('govSum'), gp = fl.get('govP'), gi = fl.get('govI'), gd = fl.get('govD'), gf = fl.get('govF'), hs = fl.get('headspeed'), tg = fl.get('govTarget'), rc = fl.get('rcCommand[3]');
+    var act = Math.max(U.nanmax(sum), 0) > 0 && (Math.max(U.nanmax(gp), -U.nanmin(gp)) + Math.max(U.nanmax(gi), -U.nanmin(gi)) + U.nanmax(gf)) > 0;
+    G.internal = act; G.ok = true;
+    if (!act) { G.reason = 'Die Governor-Anteile sind im ganzen Flug 0 - die Drehzahl wird nicht vom internen Rotorflight-Governor geregelt (z. B. ESC-Governor oder Gaskurve).'; return G; }
+    var n = fl.n, idx = []; for (i = 0; i < n; i++) if (Math.abs(tg[i] - m.target) <= 2 || !m.target_fixed) idx.push(i);
+    G.terms = { P: moments(gp, idx), I: moments(gi, idx), D: moments(gd, idx), F: moments(gf, idx), S: moments(sum, idx) };
+    var e = new Float64Array(n); for (i = 0; i < n; i++) e[i] = hs[i] - tg[i];
+    G.series = { t: fl.t, e: e, P: gp, I: gi, D: gd, F: gf };
+    // Lastwechsel: schneller Kollektiv-Anstieg / -Abfall
+    G.ev = null;
+    if (m.target_fixed && rc && fs > 100) {
+      var w = Math.max(3, Math.round(0.2 * fs)), cs = new Float64Array(n), dc = new Float64Array(n), h = Math.floor(w / 2);
+      for (i = 0; i < n; i++) { var s = 0, c = 0; for (var j = Math.max(0, i - h); j <= Math.min(n - 1, i + h); j++) { s += rc[j]; c++; } cs[i] = s / c; }
+      for (i = 1; i < n - 1; i++) dc[i] = (cs[i + 1] - cs[i - 1]) * fs / 2;
+      var ad = Array.prototype.map.call(dc, Math.abs), thr = pctl(ad, 90), win0 = Math.round(0.1 * fs), win1 = Math.round(0.8 * fs), gap = Math.round(0.6 * fs), last = -1e9, up = [], dn = [];
+      for (i = w; i < n - Math.round(3 * fs); i++) {
+        if (ad[i] < thr || i - last < gap) continue;
+        var lo = Math.max(0, i - w), hi = Math.min(n, i + w), isMax = true;
+        for (var q = lo; q < hi; q++) if (ad[q] > ad[i] && Math.sign(dc[q]) === Math.sign(dc[i])) { isMax = false; break; }
+        if (!isMax) continue; last = i;
+        var sm = 0, mx = -1e9, mn = 1e9; for (q = i + win0; q < i + win1; q++) sm += e[q]; sm /= (win1 - win0);
+        for (q = i; q < i + win1; q++) { if (e[q] > mx) mx = e[q]; if (e[q] < mn) mn = e[q]; }
+        var seg = e.subarray(i, i + Math.round(3 * fs)), k0 = 0, ab = 0; for (q = 0; q < seg.length; q++) if (Math.abs(seg[q]) > ab) { ab = Math.abs(seg[q]); k0 = q; }
+        var jq = k0; while (jq < seg.length && Math.abs(seg[jq]) >= 20) jq++;
+        (dc[i] > 0 ? up : dn).push({ mean: sm, max: mx, min: mn, rec: (jq - k0) / fs });
+      }
+      var med = function (a, k) { return median(a.map(function (x) { return x[k]; })); };
+      if (up.length >= GT.ev_min && dn.length >= GT.ev_min) G.ev = { nUp: up.length, nDn: dn.length, upMean: med(up, 'mean'), dnMean: med(dn, 'mean'), upMax: med(up, 'max'), upMin: med(up, 'min'), dnMax: med(dn, 'max'), dnMin: med(dn, 'min'), recUp: med(up, 'rec'), recDn: med(dn, 'rec') };
+    }
+    return G;
+  }
+
+  function findings(G, m) {
+    var F = [];
+    function add(sev, title, obs, todo) { F.push({ sev: sev, area: 'Governor', title: title, obs: obs, todo: todo || '' }); }
+    if (!G || !G.ok) { if (G && G.reason) add('info', 'Governor-Abstimmung nicht moeglich', G.reason, ''); return F; }
+    if (!G.internal) { add('info', 'Interner Governor nicht aktiv', G.reason, 'Governor-PID-Empfehlungen entfallen. Bei ESC-Governor die Drehzahlregelung im ESC abstimmen.'); return F; }
+    var t = G.terms, g = G.gains, gtxt = (g[0] === g[0] ? 'P ' + f0(g[0]) + ', I ' + f0(g[1]) + ', D ' + f0(g[2]) + ', F ' + f0(g[3]) : '');
+    add('info', 'Governor-Anteile', 'Mittlerer Gas-Ausgang ' + f0(t.S.mean) + ' (Skala 0-1000). Den Grundanteil traegt der I-Anteil (Mittel ' + f0(t.I.mean) + '); P schwankt um +-' + f0(t.P.std) + ', F um +-' + f0(t.F.std) + ', D um +-' + f1(t.D.std) + '. Eingestellt laut Log: ' + gtxt + ' (Reihenfolge laut Header).', '');
+    if (G.ev) {
+      var ev = G.ev, big = Math.max(Math.abs(ev.upMean), Math.abs(ev.dnMean)) >= GT.err_hint, slow = Math.max(ev.recUp, ev.recDn) > GT.rec_slow;
+      add(big || slow ? 'hint' : 'ok', 'Reaktion auf Kollektiv-Aenderungen',
+        'Nach ' + ev.nUp + ' schnellen Kollektiv-Anstiegen liegt die Drehzahl im Mittel ' + (ev.upMean >= 0 ? '+' : '') + f0(ev.upMean) + ' U/min vom Ziel entfernt (groesster Ausschlag ' + f0(ev.upMax) + ' / ' + f0(ev.upMin) + '), nach ' + ev.nDn + ' schnellen Abfaellen ' + (ev.dnMean >= 0 ? '+' : '') + f0(ev.dnMean) + ' U/min (' + f0(ev.dnMax) + ' / ' + f0(ev.dnMin) + '). Rueckkehr in +-20 U/min nach median ' + f1(Math.max(ev.recUp, ev.recDn)) + ' s.' +
+        ' Richtung: zu wenig Vorsteuerung (F) zeigt sich als Einbruch beim Anstieg, zu viel als Ueberschwingen beim Anstieg.', '');
+    }
+    return F;
+  }
+
+  function recommendations(G, m) {
+    var R = [];
+    if (!G || !G.ok || !G.internal) return R;
+    var g = G.gains, P = g[0], I = g[1], D = g[2], Fv = g[3], gv = m.gov || {}, ev = G.ev, osc = m.osc || {}, seen = {}, cands = [];
+    var oscPct = osc.n ? osc.n_big / osc.n * 100 : 0, oscF = osc.f && osc.f.length ? median(osc.f) : NaN, powerLimit = m.mot && (m.mot.near >= 10 || m.mot.peak >= 99);
+    function step(v, pct) { return Math.max(2, Math.round(Math.abs(v) * pct / 100)); }
+    function cand(prio, param, name, cur, dir, pct, why, title) {
+      if (!(cur === cur) || seen[param + dir]) return;
+      var nv = Math.max(0, cur + dir * step(cur, pct));
+      cands.push({ prio: prio, param: param, title: title, why: why, cli: ['set ' + param + ' = ' + nv + '  # war ' + f0(cur) + ', ' + (dir > 0 ? '+' : '-') + pct + ' %'], name: name });
+      seen[param + dir] = true;
+    }
+    if (powerLimit) { R.push({ area: 'PID Governor', title: 'Governor-PIDs erst nach der Leistungsreserve beurteilen', obs: 'Der Gas-Ausgang laeuft zeitweise am Limit. Einbrueche der Drehzahl sind dann eine Antriebsgrenze, keine Gain-Frage - zuerst Antrieb (Ritzel, Akku, Headspeed) pruefen.', cli: [], note: 'Siehe Reiter Antrieb.' }); return R; }
+    if (gv.p01 !== undefined && gv.p01 <= GT.dip_p01) {
+      if (ev && ev.upMean <= -GT.err_hint) cand(1, 'gov_f_gain', 'F', Fv, 1, 12, 'Beim Kollektiv-Anstieg bricht die Drehzahl im Mittel um ' + f0(-ev.upMean) + ' U/min ein: die Vorsteuerung (F) reagiert zu schwach.', 'F erhoehen (Einbruch bei Lastaufnahme)');
+      else if (ev && Math.max(ev.recUp, ev.recDn) > GT.rec_slow) cand(2, 'gov_i_gain', 'I', I, 1, 10, 'Die Drehzahl kehrt nach einem Einbruch erst nach ' + f1(Math.max(ev.recUp, ev.recDn)) + ' s zurueck: der Integralanteil arbeitet zu langsam.', 'I erhoehen (langsame Rueckkehr)');
+      else cand(3, 'gov_p_gain', 'P', P, 1, 10, 'Der 1-%-Wert der Abweichung liegt bei ' + f0(gv.p01) + ' U/min unter dem Ziel, ohne klares F- oder I-Muster: P etwas erhoehen.', 'P erhoehen (Einbruch unter Last)');
+    }
+    if (gv.p99 !== undefined && (gv.p99 >= T.over_p99_hint || gv.rate >= T.over_rate_hint)) {
+      if (ev && ev.upMean >= GT.err_hint) cand(1, 'gov_f_gain', 'F', Fv, -1, 10, 'Beim Kollektiv-Anstieg liegt die Drehzahl im Mittel +' + f0(ev.upMean) + ' U/min ueber dem Ziel: die Vorsteuerung (F) gibt zu viel Gas.', 'F senken (Ueberschwingen bei Lastaufnahme)');
+      else if (ev && ev.dnMean >= GT.err_hint) cand(1, 'gov_f_gain', 'F', Fv, 1, 10, 'Nach schnellem Kollektiv-Abfall liegt die Drehzahl im Mittel +' + f0(ev.dnMean) + ' U/min ueber dem Ziel: das Gas wird bei Lastabnahme nicht schnell genug zurueckgenommen.', 'F erhoehen (Ueberschwingen bei Lastabnahme)');
+      else if (!(oscPct >= T.osc_pct_hint)) cand(3, 'gov_p_gain', 'P', P, -1, 10, 'Ueberschwinger (99-%-Wert +' + f0(gv.p99) + ' U/min, ' + f0(gv.rate) + ' pro Minute) ohne klares F-Muster bei den Lastwechseln: der Regler korrigiert zu hart - P etwas senken.', 'P senken (Ueberschwinger)');
+    }
+    if (oscPct >= T.osc_pct_hint) {
+      var slow = oscF === oscF && oscF < 1.2;
+      if (slow) cand(2, 'gov_i_gain', 'I', I, -1, 10, 'In ' + f0(oscPct) + ' % der Fenster pendelt die Drehzahl langsam (' + f1(oscF) + ' Hz): typisch fuer einen zu hohen Integralanteil.', 'I senken (langsames Pendeln)');
+      else cand(2, 'gov_p_gain', 'P', P, -1, 10, 'In ' + f0(oscPct) + ' % der Fenster pendelt die Drehzahl' + (oscF === oscF ? ' mit ' + f1(oscF) + ' Hz' : '') + ': typisch fuer ein zu hohes P (Doku-Regel: P bis zu leichten Schwingungen erhoehen, dann um ein Drittel zurueck).', 'P senken (Pendeln)');
+    }
+    if (gv.median !== undefined && Math.abs(gv.median) >= GT.offset) cand(4, 'gov_i_gain', 'I', I, gv.median < 0 ? 1 : -1, 10, 'Die mittlere Abweichung vom Ziel betraegt ' + (gv.median >= 0 ? '+' : '') + f0(gv.median) + ' U/min: der Integralanteil gleicht den Dauerfehler nicht aus.', 'I anpassen (Dauerabweichung)');
+    cands.sort(function (a, b) { return a.prio - b.prio; });
+    var params = {}, firstDone = false;
+    cands.forEach(function (c) {
+      if (params[c.param]) { params[c.param].why += ' ' + c.why; return; }
+      params[c.param] = c; c.order = R.length;
+      R.push({ area: 'PID Governor', title: (firstDone ? 'Danach: ' : 'Erster Schritt: ') + c.title, obs: c.why, cli: c.cli, note: firstDone ? 'Erst nach dem Test des ersten Schritts, jeweils nur ein Wert pro Flug.' : 'Ein Wert pro Flug, danach gleiche Manoever (Pitch-Pumps, Funnel) fliegen und die Werte hier vergleichen. Reihenfolge der Governor-Werte im Header: P, I, D, F - bitte im Configurator (Reiter Governor) gegenpruefen.' });
+      firstDone = true;
+      c.ref = R[R.length - 1];
+    });
+    Object.keys(params).forEach(function (k) { var c = params[k]; c.ref.obs = c.why; });
+    return R;
+  }
+  var api = { analyze: analyze, findings: findings, recommendations: recommendations, GT: GT };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFG = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Bereitet die Zeitreihen/Spektren fuer die Diagramme vor (laeuft im Worker). */
+(function (root) {
+  'use strict';
+  var A = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./analysis.js') : root.RFA, U = A.util;
+  function pct(a, q) { return U.percentile(a, q); }
+  function copy(a) { return Float64Array.from(a); }
+
+  function plotData(df, m) {
+    var n = df.n, fl = m.fl, fs = m.fs, i, k, P = { t: df.t, vdiv: m.vdiv, idiv: m.idiv };
+    P.hs = df.get('headspeed'); P.tgt = df.get('govTarget'); P.Tesc = df.get('Tesc');
+    var vb = df.get('Vbat'), ib = df.get('Ibat'); P.V = new Float64Array(n); P.I = new Float64Array(n);
+    for (i = 0; i < n; i++) { P.V[i] = vb[i] / m.vdiv; P.I[i] = ib[i] / m.idiv; }
+    // Stick-Aktivitaet: trailing mean (250) je Achse, dann Mittel ueber die Achsen
+    P.stick = new Float64Array(n); var axes = 0;
+    for (k = 0; k < 3; k++) if (df.has('rcCommand[' + k + ']')) {
+      axes++; var a = df.get('rcCommand[' + k + ']'), cs = new Float64Array(n + 1);
+      for (i = 0; i < n; i++) cs[i + 1] = cs[i] + Math.abs(a[i]);
+      for (i = 0; i < n; i++) { var s0 = Math.max(0, i - 249); P.stick[i] += (cs[i + 1] - cs[s0]) / (i + 1 - s0); }
+    }
+    if (axes) for (i = 0; i < n; i++) P.stick[i] /= axes;
+    // Flugphase
+    var F = {}; F.t = fl.t; F.hs = fl.get('headspeed'); F.tg = fl.get('govTarget'); F.rc3 = fl.has('rcCommand[3]') ? fl.get('rcCommand[3]') : null;
+    F.V = fl.cols.V; F.I = fl.cols.I; F.Tesc = fl.get('Tesc'); F.gy = [0, 1, 2].map(function (q) { return fl.has('gyroADC[' + q + ']') ? fl.get('gyroADC[' + q + ']') : null; });
+    F.servo = [0, 1, 2, 3].map(function (q) { return fl.has('servo[' + q + ']') ? fl.get('servo[' + q + ']') : null; });
+    F.mot = m.mot ? m.mot.arr : null; P.fl = F;
+    // Governor-Fenster um den groessten Ueberschwinger + Histogramm + Last-Aufschluesselung
+    var g = m.gov, t = df.t;
+    if (g.t_worst !== undefined) {
+      var a0 = 0, a1 = n; for (i = 0; i < n; i++) { if (t[i] > g.t_worst - 3) { a0 = i; break; } } for (i = a0; i < n; i++) { if (t[i] >= g.t_worst + 3) { a1 = i; break; } }
+      P.gwin = { t: t.subarray(a0, a1), hs: P.hs.subarray(a0, a1), tg: P.tgt.subarray(a0, a1), rc3: df.has('rcCommand[3]') ? df.get('rcCommand[3]').subarray(a0, a1) : null };
+    }
+    var ev = [], rcv = [];
+    for (i = 0; i < fl.n; i++) if (m.target_fixed ? Math.abs(F.tg[i] - m.target) <= 2 : true) { ev.push(m.target_fixed ? F.hs[i] - m.target : F.hs[i] - F.tg[i]); if (F.rc3) rcv.push(F.rc3[i]); }
+    P.gerr = Float64Array.from(ev);
+    if (m.target_fixed && F.rc3 && ev.length >= 3000) {
+      var bins = []; for (i = 0; i < 10; i++) bins.push([]);
+      for (i = 0; i < ev.length; i++) { var r = rcv[i]; if (!(r >= -500 && r <= 500)) continue; var bi = Math.min(9, Math.max(0, Math.ceil((r + 500) / 100) - 1)); bins[bi].push(ev[i]); }
+      P.load = bins.map(function (b, ix) { var s = b.slice().sort(function (x, y) { return x - y; }); return { c: -500 + ix * 100 + 50, n: b.length, q05: s.length ? pctS(s, 5) : NaN, q50: s.length ? pctS(s, 50) : NaN, q95: s.length ? pctS(s, 95) : NaN, mx: s.length ? s[s.length - 1] : NaN, mn: s.length ? s[0] : NaN }; });
+    }
+    function pctS(s, q) { var x = q / 100 * (s.length - 1), lo = Math.floor(x), hi = Math.ceil(x); return s[lo] + (s[hi] - s[lo]) * (x - lo); }
+    // Heck-Spektrum im staerksten Fenster
+    if (m.yaw.max !== undefined) {
+      var tt = m.yaw.t_max, s1 = 0, s2 = fl.n; for (i = 0; i < fl.n; i++) { if (F.t[i] >= tt) { s1 = i; break; } } for (i = s1; i < fl.n; i++) { if (F.t[i] >= tt + 1.0) { s2 = i; break; } }
+      var N = s2 - s1, kmax = Math.floor(40 * N / fs), ys = { f: [], sp: [[], [], []] };
+      for (k = 0; k < 3; k++) if (F.gy[k]) { var d = U.dft(F.gy[k], s1, N, 0, kmax, true); for (var j = 0; j <= kmax; j++) { var fr = j * fs / N; if (fr > 2 && fr < 40) { if (k === 0) ys.f.push(fr); ys.sp[k].push(Math.hypot(d.re[j], d.im[j])); } } }
+      P.yspec = ys;
+    }
+    // Schwingungs-Karte
+    if (fl.n >= Math.floor(fs) * 4 && F.gy[0] && F.gy[1] && F.gy[2]) {
+      var win = Math.floor(fs), hop = Math.max(Math.floor(fs / 4), 1), nw = Math.floor((fl.n - win) / hop) + 1, kl = [], kh = 0, f0 = 0;
+      for (j = 0; j <= Math.floor(win / 2); j++) { var f = j * fs / win; if (f >= 2 && f <= 40) { if (!kl.length) f0 = f; kl.push(j); kh = f; } }
+      var ny = kl.length, logs = [new Float32Array(nw * ny), new Float32Array(nw * ny), new Float32Array(nw * ny)];
+      for (k = 0; k < 3; k++) for (var w = 0; w < nw; w++) { var dd = U.dft(F.gy[k], w * hop, win, kl[0], kl[ny - 1], true); for (j = 0; j < ny; j++) logs[k][w * ny + j] = Math.log10(Math.hypot(dd.re[kl[j]], dd.im[kl[j]]) + 1.0); }
+      var all = []; for (k = 0; k < 3; k++) for (i = 0; i < logs[k].length; i++) all.push(logs[k][i]);
+      var only = new Float32Array(nw * ny); for (i = 0; i < only.length; i++) only[i] = logs[2][i] - Math.max(logs[0][i], logs[1][i]);
+      var t0 = F.t[0] + 0.5 * win / fs;
+      P.spectro = { nx: nw, ny: ny, logs: logs, only: only, vmin: pct(all, 8), vmax: pct(all, 99.8), dmax: Math.max(pct(Array.from(only), 99.7), 0.3), t0: t0, t1: t0 + (nw - 1) * hop / fs, f0: f0, f1: kh };
+    }
+    return P;
+  }
+  var api = { plotData: plotData };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFP = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Worker: BBL parsen + analysieren + Plot-Daten berechnen */
+self.onmessage = function (e) {
+  var d = e.data;
+  try {
+    var logs = BBL.parse(d.buf), out = [];
+    for (var i = 0; i < logs.length; i++) {
+      self.postMessage({ progress: 'Analysiere Log ' + (i + 1) + ' von ' + logs.length + ' ...' });
+      var df = RFA.prepare(logs[i]);
+      if (!df || !df.n || df.t[df.n - 1] < 20) continue;
+      var name = d.name.replace(/\.[^.]*$/, '') + (logs.length > 1 ? ' (Log ' + (i + 1) + ')' : '');
+      var m = RFA.analyze(df, logs[i].header, name, d.cells || null);
+      var item = { name: name, m: m };
+      if (m.ok) { item.F = RFF.makeFindings(m); item.R = RFF.makePidRecommendations(m); item.P = RFP.plotData(df, m); try { var V = RFV.analyze(m); m.vib = V; item.VR = RFV.recommendations(V, m); item.F = item.F.concat(RFV.findings(V, m)); item.R = item.R.concat(item.VR); } catch (e) { m.vib = { ok: false, error: String(e) }; item.VR = []; }
+        try { var G = RFG.analyze(m); m.gtune = G; item.GR = RFG.recommendations(G, m); if (G.internal && G.ev) item.F.forEach(function (x) { if (x.area === 'Governor' && /Ueberschwinger|schiesst/.test(x.title) && x.todo) x.todo += ' Ob F wirklich die Ursache ist, zeigt die Lastwechsel-Auswertung weiter unten - massgeblich sind die Governor-PID-Empfehlungen.'; }); item.F = item.F.concat(RFG.findings(G, m)); item.R = item.R.filter(function (r) { return r.area !== 'PID Governor'; }).concat(item.GR); } catch (e2) { m.gtune = { ok: false }; item.GR = []; }
+        item.sev = RFF.overallState(item.F); }
+      delete m.fl; if (m.mot) delete m.mot.arr;
+      out.push(item);
+    }
+    if (!out.length) throw new Error('Keine auswertbaren Logs gefunden (Log kuerzer als 20 s oder keine Daten dekodiert).');
+    self.postMessage({ done: out });
+  } catch (err) { self.postMessage({ error: String(err && err.message || err) }); }
+};
+
+</script>
+<script>
+window.__ROTOR__="<svg class=\"rotor\" viewBox=\"0 0 200 200\" fill=\"none\"><defs><linearGradient id=\"g\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#60a5fa\"/><stop offset=\"1\" stop-color=\"#a78bfa\"/></linearGradient><radialGradient id=\"disc\"><stop offset=\"0\" stop-color=\"#60a5fa\" stop-opacity=\".02\"/><stop offset=\".8\" stop-color=\"#8b5cf6\" stop-opacity=\".10\"/><stop offset=\"1\" stop-color=\"#60a5fa\" stop-opacity=\".28\"/></radialGradient></defs><g stroke=\"url(#g)\" stroke-width=\"3\" stroke-linecap=\"round\"><path d=\"M86 78 V122\"/><path d=\"M114 78 V122\"/><path d=\"M80 78 H92\"/><path d=\"M108 78 H120\"/><path d=\"M80 122 H92\"/><path d=\"M108 122 H120\"/></g><rect x=\"97.5\" y=\"116\" width=\"5\" height=\"68\" rx=\"2.5\" fill=\"url(#g)\"/><path d=\"M100 150 L109 176 L100 172 Z\" fill=\"url(#g)\" opacity=\".8\"/><ellipse cx=\"100\" cy=\"98\" rx=\"15\" ry=\"32\" fill=\"url(#g)\"/><ellipse cx=\"100\" cy=\"84\" rx=\"8\" ry=\"13\" fill=\"#0e1424\" opacity=\".55\"/><g class=\"tr\"><rect x=\"98.8\" y=\"170\" width=\"2.4\" height=\"30\" rx=\"1.2\" fill=\"#c4b5fd\"/><rect x=\"85\" y=\"184.8\" width=\"30\" height=\"2.4\" rx=\"1.2\" fill=\"#c4b5fd\"/></g><g class=\"mr\"><circle cx=\"100\" cy=\"100\" r=\"92\" fill=\"url(#disc)\" stroke=\"#8da2ff\" stroke-opacity=\".35\" stroke-dasharray=\"3 6\"/><rect x=\"8\" y=\"96.5\" width=\"184\" height=\"7\" rx=\"3.5\" fill=\"url(#g)\"/><rect x=\"8\" y=\"96.5\" width=\"26\" height=\"7\" rx=\"3.5\" fill=\"#f472b6\" opacity=\".9\"/><rect x=\"166\" y=\"96.5\" width=\"26\" height=\"7\" rx=\"3.5\" fill=\"#f472b6\" opacity=\".9\"/><circle cx=\"100\" cy=\"100\" r=\"7\" fill=\"#e6ebf5\"/><circle cx=\"100\" cy=\"100\" r=\"3\" fill=\"#0e1424\"/></g></svg>";
+(function(){var s=document.getElementById('wsrc').textContent;window.__WORKER_URL__=URL.createObjectURL(new Blob([s],{type:'text/javascript'}));})();
+</script>
+<script>/* Analyse-Kern: Port von analyze(), make_findings(), make_pid_recommendations() aus rf_loganalyzer.py */
+(function (root) {
+  'use strict';
+  var THRESH = { yaw_spike_hint: 4000, yaw_spike_warn: 10000, yaw_axis_ratio: 3.0, over_event_rpm: 100, over_rate_hint: 20, over_rate_warn: 45,
+    over_p99_hint: 110, under_p01_warn: -120, spool_down_loss_s: 1.0, vcell_load_hint: 3.5, vcell_load_warn: 3.3, vcell_rest_low: 3.70,
+    esc_temp_hint: 70, esc_temp_warn: 85, servo_limit_pct_warn: 1.0, peak_prominence: 3.0, coupling_hs_rpm: 10.0, coupling_share: 0.7,
+    osc_amp_rpm: 15.0, osc_pct_hint: 8.0 };
+  var ALIASES = {
+    govTarget: ['govTarget', 'governorTarget', 'governor_target'], Vbat: ['Vbat', 'vbatLatest', 'vbat', 'voltage'],
+    Ibat: ['Ibat', 'amperageLatest', 'amperage', 'current'], Tesc: ['Tesc', 'escTemperature', 'ESC_Temp'],
+    EscRPM: ['EscRPM', 'escRPM', 'motor_rpm'], EscThr: ['EscThr', 'escThrottle'], time: ['time', 'time (us)'],
+    failsafePhase: ['failsafePhase', 'failsafePhase (flags)'] };
+  var NaNv = NaN;
+
+  // ---------- Hilfsfunktionen ----------
+  function Frame(cols, n) { this.cols = cols; this.n = n; this._nan = null; }
+  Frame.prototype.has = function (name) { var a = ALIASES[name] || [name]; for (var i = 0; i < a.length; i++) if (this.cols[a[i]]) return true; return false; };
+  Frame.prototype.get = function (name) {
+    var a = ALIASES[name] || [name];
+    for (var i = 0; i < a.length; i++) if (this.cols[a[i]]) return this.cols[a[i]];
+    if (!this._nan) { this._nan = new Float64Array(this.n); this._nan.fill(NaN); }
+    return this._nan;
+  };
+  Frame.prototype.slice = function (a, b) { var c = {}, self = this; for (var k in this.cols) c[k] = this.cols[k].subarray(a, b); var f = new Frame(c, b - a); return f; };
+  function fin(x) { return x === x && x !== Infinity && x !== -Infinity; }
+  function sortedClean(a) { var o = []; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) o.push(a[i]); o.sort(function (x, y) { return x - y; }); return o; }
+  function medianSorted(s) { var n = s.length; if (!n) return NaN; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; }
+  function median(a) { return medianSorted(sortedClean(a)); }
+  function pctSorted(s, q) { var n = s.length; if (!n) return NaN; var x = q / 100 * (n - 1), lo = Math.floor(x), hi = Math.ceil(x); return s[lo] + (s[hi] - s[lo]) * (x - lo); }
+  function percentile(a, q) { return pctSorted(sortedClean(a), q); }
+  function nanmean(a) { var s = 0, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { s += a[i]; c++; } return c ? s / c : NaN; }
+  function nanmax(a) { var m = -Infinity, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { c++; if (a[i] > m) m = a[i]; } return c ? m : NaN; }
+  function nanmin(a) { var m = Infinity, c = 0; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) { c++; if (a[i] < m) m = a[i]; } return c ? m : NaN; }
+  function ptp(a, s, e) { var lo = Infinity, hi = -Infinity; for (var i = s; i < e; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; } return hi - lo; }
+  function meanRange(a, s, e) { var t = 0; for (var i = s; i < e; i++) t += a[i]; return t / (e - s); }
+  function rollMedianAt(a, i, w) { var off = Math.floor((w - 1) / 2), end = i + 1 + off, st = end - w; if (st < 0) st = 0; if (end > a.length) end = a.length; var t = []; for (var j = st; j < end; j++) if (a[j] === a[j]) t.push(a[j]); t.sort(function (x, y) { return x - y; }); return medianSorted(t); }
+  function rollMedian(a, w) { var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = rollMedianAt(a, i, w); return o; }
+  function pySlice(a, s, e) { var n = a.length; if (s < 0) s += n; if (e < 0) e += n; s = Math.max(0, s); e = Math.min(n, e); return s < e ? Array.prototype.slice.call(a, s, e) : []; }
+  function trapz(y, x) { var s = 0; for (var i = 1; i < y.length; i++) s += (y[i] + y[i - 1]) / 2 * (x[i] - x[i - 1]); return s; }
+  function mergedSegments(mask, t, gap) {
+    var idx = []; for (var i = 0; i < mask.length; i++) if (mask[i]) idx.push(i);
+    if (!idx.length) return [];
+    var segs = [], st = 0;
+    for (var k = 1; k < idx.length; k++) if (t[idx[k]] - t[idx[k - 1]] > gap) { segs.push([idx[st], idx[k - 1]]); st = k; }
+    segs.push([idx[st], idx[idx.length - 1]]); return segs;
+  }
+  // Teil-DFT (reelle Eingabe) fuer Bins k0..k1; optional Hann-Fenster
+  var _tw = {};
+  function twiddle(N) { if (_tw[N]) return _tw[N]; var c = new Float64Array(N), s = new Float64Array(N); for (var i = 0; i < N; i++) { c[i] = Math.cos(2 * Math.PI * i / N); s[i] = Math.sin(2 * Math.PI * i / N); } return (_tw[N] = { c: c, s: s }); }
+  var _hn = {};
+  function hann(N) { if (_hn[N]) return _hn[N]; var w = new Float64Array(N); for (var i = 0; i < N; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1)); return (_hn[N] = w); }
+  function dft(y, off, N, k0, k1, win) {
+    var tw = twiddle(N), mean = 0, i, k; for (i = 0; i < N; i++) mean += y[off + i]; mean /= N;
+    var z = new Float64Array(N), w = win ? hann(N) : null;
+    for (i = 0; i < N; i++) z[i] = (y[off + i] - mean) * (w ? w[i] : 1);
+    var re = new Float64Array(k1 + 1), im = new Float64Array(k1 + 1);
+    for (k = k0; k <= k1; k++) { var r = 0, m = 0, idx = 0; for (i = 0; i < N; i++) { r += z[i] * tw.c[idx]; m -= z[i] * tw.s[idx]; idx += k; if (idx >= N) idx %= N; } re[k] = r; im[k] = m; }
+    return { re: re, im: im };
+  }
+  function bandBins(N, fs, lo, hi, strict) { var a = [], half = Math.floor(N / 2); for (var k = 0; k <= half; k++) { var f = k * fs / N; if (strict ? (f > lo && f < hi) : (f >= lo && f <= hi)) a.push(k); } return a; }
+  function bandEnergy(y, off, N, fs, lo, hi) {   // -> [sum|X|, f_at_max, max|X|]
+    var b = bandBins(N, fs, lo, hi, true); if (!b.length) return [0, 0, 0];
+    var d = dft(y, off, N, b[0], b[b.length - 1], true), s = 0, mx = -1, fm = 0;
+    for (var j = 0; j < b.length; j++) { var k = b[j], a = Math.hypot(d.re[k], d.im[k]); s += a; if (a > mx) { mx = a; fm = k * fs / N; } }
+    return [s, fm, mx];
+  }
+  function bandRms(y, off, N, fs, lo, hi) {
+    var b = bandBins(N, fs, lo, hi, false); if (!b.length) return 0;
+    var d = dft(y, off, N, b[0], b[b.length - 1], false), s = 0, half = N / 2;
+    for (var j = 0; j < b.length; j++) { var k = b[j]; if (k === 0) continue; var p = d.re[k] * d.re[k] + d.im[k] * d.im[k]; s += (k === half) ? p : 2 * p; }
+    return Math.sqrt(s / (N * N));
+  }
+  function fnum(x, nd, unit) { if (x === null || x === undefined || !fin(x)) return '-'; return x.toFixed(nd || 0) + (unit || ''); }
+  function pidParts(s) { var p = String(s || '').split(','), o = []; for (var i = 0; i < 5; i++) { var v = parseFloat(p[i]); o.push(isNaN(v) ? NaN : v); } return o; }
+  function firstNum(s) { var v = parseFloat(String(s || '').split(',')[0]); return isNaN(v) ? NaN : v; }
+
+  // ---------- Vorbereitung ----------
+  function prepare(log) {
+    var cols = {}, n = log.n, k;
+    var SIGNED = ['gyro', 'axisP', 'axisI', 'axisD', 'axisF', 'axisO', 'setpoint[0]', 'setpoint[1]', 'setpoint[2]', 'rcCommand[0]', 'rcCommand[1]', 'rcCommand[2]'];
+    for (k in log.cols) {
+      var a = log.cols[k];
+      var isS = SIGNED.some(function (p) { return k.indexOf(p) === 0; });
+      if (isS && nanmax(a) > Math.pow(2, 30)) { var c = new Float64Array(n); for (var i = 0; i < n; i++) c[i] = a[i] > 2147483648 ? a[i] - 4294967296 : a[i]; a = c; }
+      cols[k] = a;
+    }
+    var f = new Frame(cols, n), tt = f.get('time'), t = new Float64Array(n), t0 = tt[0];
+    for (var i2 = 0; i2 < n; i2++) t[i2] = (tt[i2] - t0) / 1e6;
+    cols.t = t; f.t = t; return f;
+  }
+  function voltDiv(vb, hdr) {
+    var v = []; for (var i = 0; i < vb.length; i++) if (vb[i] > 0) v.push(vb[i]);
+    if (!v.length) return 1.0;
+    var head = v.slice(0, Math.max(Math.floor(v.length / 20), 1)), start = percentile(head, 90), ref = parseFloat((hdr || {}).vbatref) / 100;
+    if (fin(ref) && ref > 0) { var best = 1, bd = Infinity; [1, 10, 100, 1000].forEach(function (d) { var e = Math.abs(Math.log((start / d) / ref)); if (e < bd) { bd = e; best = d; } }); return best; }
+    var med = median(v); return med > 1000 ? 1000 : (med > 60 ? 10 : 1);
+  }
+
+  // ---------- Analyse ----------
+  function analyze(df, hdr, name, cellsArg) {
+    var t = df.t, n = df.n, i, j, k;
+    var m = { name: name, hdr: hdr, ok: false };
+    var dts = []; for (i = 1; i < Math.min(n, 20001); i++) dts.push(t[i] - t[i - 1]);
+    var fs = 1 / median(dts); m.fs = fs;
+    var hsRaw = df.get('headspeed'), hs = new Float64Array(n); for (i = 0; i < n; i++) hs[i] = hsRaw[i] === hsRaw[i] ? hsRaw[i] : 0;
+    if (nanmax(hs) < 50) { var er = df.get('EscRPM'); for (i = 0; i < n; i++) hs[i] = er[i] === er[i] ? er[i] : 0; }
+    var tgtRaw = df.get('govTarget'), tgt = new Float64Array(n); for (i = 0; i < n; i++) tgt[i] = tgtRaw[i] === tgtRaw[i] ? tgtRaw[i] : 0;
+    var mask = new Uint8Array(n); for (i = 0; i < n; i++) mask[i] = hs[i] > 50 ? 1 : 0;
+    var segs = mergedSegments(mask, t, 2.0);
+    if (!segs.length) { m.error = 'Kein Rotorlauf im Log gefunden.'; return m; }
+    var best = segs[0]; segs.forEach(function (s) { if (t[s[1]] - t[s[0]] > t[best[1]] - t[best[0]]) best = s; });
+    var i0 = best[0], i1 = best[1];
+    if (t[i1] - t[i0] < 20) { m.error = 'Rotorlauf kuerzer als 20 s - zu kurz fuer eine sinnvolle Analyse.'; return m; }
+    m.ok = true; m.t0 = t[i0]; m.t1 = t[i1];
+    // Ziel-Drehzahl
+    var pos = []; for (i = i0; i <= i1; i++) if (tgt[i] > 50) pos.push(tgt[i]);
+    var noTgt = !pos.length, tgtMed, fixedFrac = 0;
+    if (noTgt) { var hv = []; for (i = i0; i <= i1; i++) hv.push(hs[i]); hv.sort(function (a, b) { return a - b; }); var p90 = hv[Math.floor(hv.length * 0.9)]; var hh = hv.filter(function (x) { return x > 0.9 * p90; }); tgtMed = hh.length ? median(hh) : nanmax(hs); }
+    else tgtMed = median(pos);
+    if (pos.length) { var c2 = 0; pos.forEach(function (x) { if (Math.abs(x - tgtMed) <= 2) c2++; }); fixedFrac = c2 / pos.length; }
+    m.target = tgtMed; m.target_fixed = fixedFrac > 0.6;
+    // Hochlauf / Gaskappung / Auslauf
+    var iUp = i0, upFound = false; for (i = i0; i <= i1; i++) if (hs[i] >= 0.95 * tgtMed) { iUp = i; upFound = true; break; }
+    m.spool_up_s = upFound ? t[iUp] - t[i0] : NaN;
+    var s5 = i0 + Math.floor(5 * fs), iCut = i1;
+    if (noTgt) { var low = 0; for (i = Math.max(s5, iUp); i <= i1; i++) { if (hs[i] < 0.9 * tgtMed) { if (++low > fs * 0.5) { iCut = i - low + 1; break; } } else low = 0; } }
+    else for (i = s5; i <= i1; i++) if (tgt[i] === 0 && hs[i] > 50) { iCut = i; break; }
+    m.t_cut = t[iCut]; var downT = NaN; for (i = iCut; i < n; i++) if (hs[i] < 50) { downT = t[i] - t[iCut]; break; }
+    m.spool_down_s = downT; m.hs_at_cut = hs[Math.max(iCut - 1, 0)];
+    var iFl = Math.min(iUp + Math.floor(2 * fs), iCut - 1);
+    var fl = df.slice(iFl, iCut); m.fl = fl; m.iFl = iFl; m.iCut = iCut;
+    var flt = fl.t = fl.cols.t; fl.n = iCut - iFl;
+    m.flight_s = fl.n > 10 ? flt[fl.n - 1] - flt[0] : 0;
+    if (m.flight_s < 15) { m.ok = false; m.error = 'Flugphase (Drehzahl erreicht bis Gaskappung) kuerzer als 15 s.'; return m; }
+    // Elektrik
+    var vb = df.get('Vbat'), ib = df.get('Ibat'), vdiv = voltDiv(vb, hdr);
+    var ibv = []; for (i = 0; i < n; i++) if (ib[i] === ib[i] && ib[i] !== 0) ibv.push(ib[i]);
+    var ibMed = ibv.length ? median(ibv) : NaN, idiv = (fin(ibMed) && ibMed > 500) ? 100 : 1;
+    m.vdiv = vdiv; m.idiv = idiv;
+    var V = new Float64Array(n), I = new Float64Array(n); for (i = 0; i < n; i++) { V[i] = vb[i] / vdiv; I[i] = ib[i] / idiv; }
+    var flV = V.subarray(iFl, iCut), flI = I.subarray(iFl, iCut); fl.cols.V = flV; fl.cols.I = flI;
+    var s2 = [], tc = 0; for (i = 0; i < n && t[i] < 2; i++) s2.push(V[i]);
+    m.v_start = nanmean(s2);
+    m.cells = (cellsArg || Math.ceil(m.v_start / 4.25)); if (!(m.v_start > 3)) m.cells = 1;
+    var vs = rollMedian(flV, 25); m.v_min = nanmin(vs); m.v_min_cell = m.v_min / m.cells;
+    m.hasElec = fin(m.v_min) && fin(nanmax(flI));
+    m.i_peak = nanmax(flI); m.i_mean = nanmean(flI);
+    var Pw = new Float64Array(fl.n); for (i = 0; i < fl.n; i++) Pw[i] = flI[i] * flV[i];
+    m.p_peak = nanmax(Pw); m.p_mean = nanmean(Pw);
+    var sA = 0, sB = 0; for (i = 0; i < n; i++) { if (t[i] >= t[i0]) { sA = i; break; } } for (i = n - 1; i >= 0; i--) { if (t[i] <= t[i1]) { sB = i + 1; break; } }
+    var segT = t.subarray(sA, sB), segI = I.subarray(sA, sB), segV = V.subarray(sA, sB);
+    m.mah = trapz(segI, segT) / 3.6;
+    var iv = new Float64Array(segI.length); for (i = 0; i < iv.length; i++) iv[i] = segI[i] * segV[i];
+    m.wh = trapz(iv, segT) / 3600;
+    var cum = new Float64Array(segI.length), acc = 0; for (i = 1; i < segI.length; i++) { acc += (segI[i] + segI[i - 1]) / 2 * (segT[i] - segT[i - 1]); cum[i] = acc / 3.6; }
+    var step = Math.max(Math.floor(fs), 1), cx = [], cv = []; for (i = 0; i < cum.length; i += step) { cx.push(cum[i]); cv.push(rollMedianAt(segV, i, 1000) / m.cells); }
+    m.curve = [cx, cv];
+    var tailV = [], tEnd = t[n - 1]; for (i = 0; i < n; i++) if (t[i] > tEnd - 3 && I[i] < 2) tailV.push(V[i]);
+    m.v_rest_cell = tailV.length > 20 ? nanmean(tailV) / m.cells : NaN;
+    var te = df.get('Tesc'), ts3 = []; for (i = 0; i < n && t[i] < 3; i++) ts3.push(te[i]);
+    m.t_esc_start = nanmean(ts3); m.t_esc_max = nanmax(te);
+    // Governor
+    var flHs = fl.get('headspeed'), flTg = fl.get('govTarget'); m.gov = {};
+    if (m.target_fixed) {
+      var gi = []; for (i = 0; i < fl.n; i++) if (Math.abs(tgt[iFl + i] - tgtMed) <= 2) gi.push(i);
+      var e = gi.map(function (ix) { return flHs[ix] - tgtMed; });
+      if (e.length > 2000) {
+        var evn = 0; for (i = 1; i < e.length; i++) if ((e[i] > THRESH.over_event_rpm ? 1 : 0) - (e[i - 1] > THRESH.over_event_rpm ? 1 : 0) === 1) evn++;
+        var mins = e.length / fs / 60, es = sortedClean(e), am = 0, w20 = 0; e.forEach(function (x, ix) { if (x > e[am]) am = ix; if (Math.abs(x) <= 20) w20++; });
+        m.gov = { rate: evn / mins, p99: pctSorted(es, 99), p01: pctSorted(es, 1), maxover: nanmax(e), median: medianSorted(es), within20: w20 / e.length * 100, t_worst: flt[gi[am]] };
+      }
+    } else {
+      var e2 = new Float64Array(fl.n), w2 = 0, md = 0; for (i = 0; i < fl.n; i++) { e2[i] = flHs[i] - flTg[i]; if (Math.abs(e2[i]) <= 20) w2++; if (Math.abs(e2[i]) > md) md = Math.abs(e2[i]); }
+      m.gov = { variable: true, within20: w2 / fl.n * 100, maxdev: md };
+    }
+    // Heck
+    var gy = {}; for (k = 0; k < 3; k++) if (fl.has('gyroADC[' + k + ']')) gy[k] = fl.get('gyroADC[' + k + ']');
+    var rc = [0, 1, 2].map(function (q) { return fl.has('rcCommand[' + q + ']') ? fl.get('rcCommand[' + q + ']') : null; });
+    var hasRc2 = !!rc[2], ysp = new Float64Array(fl.n), allst = new Float64Array(fl.n);
+    for (i = 0; i < fl.n; i++) { ysp[i] = hasRc2 ? Math.abs(rc[2][i]) : 0; allst[i] = hasRc2 ? (Math.abs(rc[0][i]) + Math.abs(rc[1][i]) + Math.abs(rc[2][i])) / 3 : ysp[i]; }
+    var win = Math.floor(fs), stp = Math.floor(fs / 2), yE = [], yF = [], wT = [], yPk = [], yH = [];
+    for (var s0 = 0; s0 < fl.n - win; s0 += stp) {
+      if (meanRange(ysp, s0, s0 + win) < 30 && gy[2]) {
+        var b2 = bandEnergy(gy[2], s0, win, fs, 8, 20), br = bandEnergy(gy[0], s0, win, fs, 8, 20), bp = bandEnergy(gy[1], s0, win, fs, 8, 20);
+        yE.push(b2[0]); yF.push(b2[1]); wT.push(flt[s0]); yPk.push(b2[2] / Math.max(br[2], bp[2], 1.0));
+        var fixedW = m.target_fixed && ptp(flTg, s0, s0 + win) <= 5;
+        yH.push(fixedW ? bandRms(flHs, s0, win, fs, 5, 20) : NaN);
+      }
+    }
+    m.yaw = { t: wT, E: yE, F: yF, ratio_arr: yPk, H: yH };
+    var evIdx = []; for (i = 0; i < yE.length; i++) if (yE[i] >= THRESH.yaw_spike_hint && yH[i] === yH[i]) evIdx.push(i);
+    if (evIdx.length >= 1) {
+      var hv = evIdx.map(function (ix) { return yH[ix]; }), cnt = hv.filter(function (x) { return x >= THRESH.coupling_hs_rpm; }).length;
+      m.yaw.coupling = { n: evIdx.length, share: cnt / evIdx.length, med_hs: median(hv), med_all: median(yH.filter(function (x) { return x === x; })) };
+    } else m.yaw.coupling = null;
+    if (yE.length) {
+      var kk = 0; yE.forEach(function (x, ix) { if (x > yE[kk]) kk = ix; });
+      var yes = sortedClean(yE);
+      Object.assign(m.yaw, { median: medianSorted(yes), p95: pctSorted(yes, 95), max: yE[kk], f_max: yF[kk], ratio: yPk[kk], t_max: wT[kk], n: yE.length });
+    }
+    // Hover-Spektrum
+    var w2s = Math.floor(2 * fs), wobble = [], hov = [];
+    for (s0 = 0; s0 < fl.n - w2s; s0 += Math.floor(w2s / 2)) {
+      if (meanRange(allst, s0, s0 + w2s) < 25 && gy[0]) {
+        wobble.push((bandRms(gy[0], s0, w2s, fs, 2, 8) + bandRms(gy[1], s0, w2s, fs, 2, 8)) / 2);
+        var kmax = Math.ceil(61 * w2s / fs), accs = [];
+        for (k = 0; k < 3; k++) { var d = dft(gy[k], s0, w2s, 0, kmax, true), amp = new Float64Array(kmax + 1); for (j = 0; j <= kmax; j++) amp[j] = Math.hypot(d.re[j], d.im[j]) / w2s; accs.push(amp); }
+        hov.push(accs);
+      }
+    }
+    m.wobble = wobble.length >= 3 ? median(wobble) : NaN; m.wobble_n = wobble.length; m.hover_peaks = []; m.hover_n = hov.length;
+    if (hov.length >= 3) {
+      var df2 = fs / w2s, labs = ['Roll', 'Nick', 'Gier']; m.hover_spec = { df: df2, axes: [] };
+      for (k = 0; k < 3; k++) {
+        var sp = new Float64Array(hov[0][k].length); for (var h = 0; h < hov.length; h++) for (j = 0; j < sp.length; j++) sp[j] += hov[h][k][j] / hov.length;
+        m.hover_spec.axes.push(sp);
+        for (j = Math.floor(3 / df2); j < Math.floor(40 / df2); j++) {
+          var loc = pySlice(sp, j - 8, j - 2).concat(pySlice(sp, j + 3, j + 9)), mx = Math.max.apply(null, pySlice(sp, j - 2, j + 3));
+          if (sp[j] === mx && sp[j] / Math.max(median(loc), 1e-9) >= THRESH.peak_prominence) m.hover_peaks.push([labs[k], j * df2, sp[j] / Math.max(median(loc), 1e-9)]);
+        }
+      }
+      m.hover_peaks.sort(function (a, b) { return b[2] - a[2]; });
+    }
+    // Drehzahl-Pendeln
+    var osc = { n: 0, n_big: 0, f: [], worst: null };
+    if (m.target_fixed) {
+      var w3 = Math.floor(2 * fs), st3 = Math.floor(fs), wmax = 0;
+      for (s0 = 0; s0 < fl.n - w3; s0 += st3) {
+        if (ptp(flTg, s0, s0 + w3) > 5) continue;
+        var amp2 = bandRms(flHs, s0, w3, fs, 2, 10); osc.n++;
+        if (amp2 > THRESH.osc_amp_rpm) { osc.n_big++; osc.f.push(bandEnergy(flHs, s0, w3, fs, 2, 10)[1]); }
+        if (amp2 > wmax) { wmax = amp2; osc.worst = flt[s0] + 1.0; }
+      }
+      osc.amp_max = wmax;
+    }
+    m.osc = osc;
+    // Regelverhalten
+    var trk = {}; ['Roll', 'Nick', 'Gier'].forEach(function (lab, kx) {
+      if (fl.has('setpoint[' + kx + ']') && gy[kx]) {
+        var sp2 = fl.get('setpoint[' + kx + ']'), er2 = []; for (var q = 0; q < fl.n; q++) if (Math.abs(sp2[q]) > 150) er2.push(Math.abs(sp2[q] - gy[kx][q]));
+        if (er2.length > 200) trk[lab] = [median(er2), percentile(er2, 95), er2.length];
+      }
+    });
+    m.track = trk;
+    // Servos
+    var sv = {}; for (k = 0; k < 4; k++) if (fl.has('servo[' + k + ']')) {
+      var x = fl.get('servo[' + k + ']'), okAll = true; for (i = 0; i < x.length; i++) if (x[i] !== x[i]) { okAll = false; break; }
+      if (!okAll) continue; var lo = nanmin(x), hi = nanmax(x), cl = 0, ch = 0; for (i = 0; i < x.length; i++) { if (x[i] <= lo + 1) cl++; if (x[i] >= hi - 1) ch++; }
+      sv[k] = { lo: lo, hi: hi, pct_lo: cl / x.length * 100, pct_hi: ch / x.length * 100 };
+    }
+    m.servo = sv;
+    // Antrieb / Reserve
+    m.mot = null;
+    var thr = fl.get('EscThr'), thrMax = 0; for (i = 0; i < thr.length; i++) if (thr[i] === thr[i] && Math.abs(thr[i]) > thrMax) thrMax = Math.abs(thr[i]);
+    var src = thrMax > 0 ? 'EscThr' : 'motor[0]', mo = fl.get(src), mmax = nanmax(mo);
+    if (fin(mmax) && mmax > 0) {
+      var sc = mmax > 100 ? 10 : 1, ms = [], moArr = new Float64Array(fl.n);
+      for (i = 0; i < fl.n; i++) { moArr[i] = mo[i] / sc; var stab = m.target_fixed ? Math.abs(flTg[i] - tgtMed) <= 2 : true; if (stab && moArr[i] > 0) ms.push(moArr[i]); }
+      if (ms.length > 200) { var mean = nanmean(ms), pk = nanmax(moArr), pi2 = 0; for (i = 0; i < fl.n; i++) if (moArr[i] > moArr[pi2]) pi2 = i;
+        var nearc = ms.filter(function (x) { return x >= 95; }).length; m.mot = { src: src, mean: mean, reserve: 100 - mean, peak: pk, near: nearc / ms.length * 100, t_peak: flt[pi2], arr: moArr }; }
+    }
+    // Signal
+    m.rx_loss = 0; if (fl.has('rxSignalReceived')) { var rr = fl.get('rxSignalReceived'); for (i = 0; i < rr.length; i++) if (rr[i] === 0) m.rx_loss++; }
+    m.failsafe_active = false; if (fl.has('failsafePhase')) { var fp = fl.get('failsafePhase'); for (i = 0; i < fp.length; i++) if (fp[i] !== 0) { m.failsafe_active = true; break; } }
+    m.v_zero = 0; for (i = 0; i < flV.length; i++) if (flV[i] <= 0.1) m.v_zero++;
+    m.escthr_dead = fl.has('EscThr') ? thrMax === 0 : null;
+    m.stick_activity = nanmean(allst);
+    return m;
+  }
+
+  var api = { analyze: analyze, prepare: prepare, THRESH: THRESH, Frame: Frame, fnum: fnum, pidParts: pidParts, firstNum: firstNum, util: { median: median, percentile: percentile, nanmean: nanmean, nanmax: nanmax, nanmin: nanmin, rollMedian: rollMedian, dft: dft, hann: hann, fin: fin, pySlice: pySlice, voltDiv: voltDiv } };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFA = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Port von make_findings(), overall_state(), make_pid_recommendations() */
+(function (root) {
+  'use strict';
+  var A = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./analysis.js') : root.RFA;
+  var T = A.THRESH, fnum = A.fnum, firstNum = A.firstNum, fin = A.util.fin;
+  var SEV_ORDER = { warn: 0, hint: 1, info: 2, ok: 3 };
+  var SEV_LABEL = { warn: 'Handlungsbedarf', hint: 'Hinweis', info: 'Info', ok: 'In Ordnung' };
+  var f0 = function (x) { return x.toFixed(0); }, f1 = function (x) { return x.toFixed(1); }, f2 = function (x) { return x.toFixed(2); };
+
+  function makeFindings(m) {
+    var F = [], hdr = m.hdr || {};
+    function add(sev, area, title, obs, todo) { F.push({ sev: sev, area: area, title: title, obs: obs || '', todo: todo || '' }); }
+    if (!m.ok) { add('info', 'Log', 'Log nicht ausgewertet', m.error || '', ''); return F; }
+    // ---------- Heck ----------
+    var y = m.yaw;
+    if (y.max !== undefined) {
+      var notch = firstNum(hdr.dyn_notch_min_hz), below = fin(notch) && y.f_max < notch, specific = y.ratio >= T.yaw_axis_ratio;
+      var axis = specific ? 'fast nur auf der Gier-Achse (Peak ' + f1(y.ratio) + 'x hoeher als auf Roll/Nick) - typisch fuer eine Regelkreis-Schwingung des Hecks'
+        : 'auch auf Roll/Nick sichtbar (Gier-Peak nur ' + f1(y.ratio) + 'x hoeher) - kann Gesamtstoerung oder Mechanik sein';
+      var obs = 'Bei ruhigem Gier-Stick faellt die staerkste Schwingung bei ' + f1(y.f_max) + ' Hz auf, ' + axis + '. Spitzenwert ' + f0(y.max) + ', typischer Wert ' + f0(y.median) +
+        ' (Richtwerte: ab ' + f0(T.yaw_spike_hint) + ' Hinweis, ab ' + f0(T.yaw_spike_warn) + ' Handlungsbedarf).';
+      if (below) obs += ' Sie liegt unter der Notch-Filtergrenze (' + f0(notch) + ' Hz) - die Filter koennen hier nichts ausrichten, es muss an der Quelle behoben werden.';
+      var todoPid = 'Yaw-P in Schritten von 10-15 % senken (nur einen Wert pro Flug aendern), danach Log vergleichen. Reicht das nicht: yaw_stop_gain senken (laut Rotorflight-Doku kann ein zu hoher Wert schnelle Schwingungen ausloesen) oder Yaw-D pruefen. Rotorflight-Tuning-Doku: schnelle Schwingungen sind typisch fuer zu hohes P bzw. D.';
+      var todoMech = 'Mechanik pruefen: Heckantrieb (Riemenspannung/Zahnspiel), Heckrotorlager, Blattgriffe, Rahmenschrauben/Elektronikdaempfung. Zusaetzlich ist eine Yaw-P-Senkung um 10-15 % ein risikoarmer Test.';
+      var todo = specific ? todoPid : todoMech;
+      if (y.max >= T.yaw_spike_warn) add('warn', 'Heck', 'Heck schwingt bei ruhigem Stick', obs, todo);
+      else if (y.max >= T.yaw_spike_hint) add('hint', 'Heck', 'Gelegentliche Heck-Schwingungsspitzen', obs, todo);
+      else add('ok', 'Heck', 'Heck ruhig', obs);
+    }
+    var cp = y.coupling;
+    if (cp && cp.n >= 3 && cp.share >= T.coupling_share) {
+      add('hint', 'Heck', 'Heck und Drehzahl schwingen gemeinsam',
+        'In ' + cp.n + ' Fenstern mit Heck-Schwingung schwingt gleichzeitig auch die Kopfdrehzahl (' + f0(cp.med_hs) + ' U/min RMS im Band 5-20 Hz, sonst typisch ' + f1(cp.med_all) + '); ' + f0(cp.share * 100) + ' % dieser Fenster zeigen das.',
+        "Moegliche Kopplung: Laut Rotorflight-Quellcode mischt der Governor den Betrag des Heck-PID-Ausgangs (Gewicht 'Yaw-Vorsteuerung') in die Gas-Vorsteuerung. Schwingt das Heck, schwingt dadurch auch das Gas; bei mechanisch angetriebenem Heck wirkt die Drehzahl zusaetzlich direkt auf den Heckschub. Test: im Governor-Profil die Yaw-Vorsteuerung (und ggf. Cyclic-Vorsteuerung) senken, nur das in einem Flug aendern und vergleichen. Das ist eine Hypothese - belegt ist nur das gemeinsame Auftreten, nicht die Ursache.");
+    }
+    // ---------- Governor ----------
+    var g = m.gov;
+    if (g.variable) {
+      add('info', 'Governor', 'Variables Drehzahlziel (Ziel folgt dem Gasstick/Kurve)', f0(g.within20) + ' % der Zeit innerhalb +-20 U/min, groesste Abweichung ' + f0(g.maxdev) + '. Ueberschwinger-Statistik ist bei variablem Ziel nicht aussagekraeftig.',
+        'Fuer eine saubere Governor-Beurteilung ein festes Ziel fliegen (Gas auf Anschlag/Profilumschaltung).');
+    } else if (g.rate !== undefined) {
+      var o2 = 'Bei festem Ziel ' + f0(m.target) + ': ' + f0(g.within20) + ' % der Zeit innerhalb +-20 U/min; ' + f0(g.rate) + ' Ueberschwinger (>' + T.over_event_rpm + ' U/min) pro Minute, 99-%-Wert +' + f0(g.p99) + ', groesster +' + f0(g.maxover) + '; untere Seite (1-%-Wert) ' + f0(g.p01) + '.';
+      var overDom = g.p99 > 2 * Math.abs(g.p01);
+      var td = overDom ? "Die Drehzahl liegt deutlich haeufiger UEBER als UNTER dem Ziel. Laut Rotorflight-Governor-Doku fuehrt ein zu hohes F-Gain dazu, dass die Drehzahl kurzzeitig zu hoch ist (zu niedriges F: sie faellt bei Pitch-Pumps ein). Pruefe daher F-Gain und die Vorsteuerungs-Gewichte Collective/Cyclic/Yaw im Governor-Profil (stehen nicht im Log-Header) und senke sie in 10er-Schritten. Schaue dir die Form an: einmalige Spitze = Vorsteuerung zu hoch; periodisches Pendeln siehe Befund 'Drehzahl pendelt'."
+        : 'Die Drehzahl bricht eher ein als sie ueberschiesst: F-Gain bzw. Vorsteuerung (Collective/Cyclic/Yaw) erhoehen (10er-Schritte), dann P/I pruefen und Leistungsreserve (Akku, ESC) kontrollieren.';
+      td += ' Flugstil beeinflusst die Zahlen stark - vergleiche nur Fluege mit aehnlicher Belastung.';
+      if (g.rate >= T.over_rate_warn || g.p99 >= T.over_p99_hint * 1.5) add('warn', 'Governor', 'Drehzahl schiesst bei Lastwechseln deutlich ueber das Ziel', o2, td);
+      else if (g.rate >= T.over_rate_hint || g.p99 >= T.over_p99_hint) add('hint', 'Governor', 'Gelegentliche Drehzahl-Ueberschwinger', o2, td);
+      else add('ok', 'Governor', 'Governor haelt die Drehzahl sauber', o2);
+      if (g.p01 <= T.under_p01_warn) add('warn', 'Governor', 'Drehzahl bricht unter Last ein', '1-%-Wert der Abweichung ' + f0(g.p01) + ' U/min unter Ziel.',
+        'Leistungsreserve pruefen: Akkuzustand/Spannungseinbruch, ESC-Strombegrenzung, Motor-/Uebersetzungsauslegung; F-Gain ggf. erhoehen.');
+      var o = m.osc;
+      if (o.n >= 20) {
+        var pct = 100 * o.n_big / o.n, fmed = o.f.length ? A.util.median(o.f) : NaN;
+        var ob = 'In ' + f1(pct) + ' % der 2-Sekunden-Fenster pendelt die Drehzahl periodisch (2-10 Hz, mehr als ' + f0(T.osc_amp_rpm) + ' U/min RMS), typische Frequenz ' + fnum(fmed, 1) + ' Hz, staerkste Episode ' + f0(o.amp_max) + ' U/min RMS.';
+        if (pct >= T.osc_pct_hint) add('hint', 'Governor', 'Drehzahl pendelt zeitweise', ob, "Rotorflight-Doku: Zu hohes Governor-P bzw. Master-Gain laesst die Drehzahl pendeln/'surgen'. P-Gain in 10er-Schritten senken (Doku-Regel: P bis zu leichten Schwingungen erhoehen, dann um 1/3 zurueck). Pruefe auch Headspeed-Filter-Cutoff und die RPM-Signalqualitaet. Streut die Frequenz stark, kommt es eher von Lastwechseln als von einer festen Resonanz.");
+        else add('ok', 'Governor', 'Kein nennenswertes Drehzahl-Pendeln', ob);
+      }
+    }
+    // Hochlauf / Auslauf
+    if (fin(m.spool_down_s) && m.spool_down_s < T.spool_down_loss_s && m.hs_at_cut > 500) {
+      add('hint', 'ESC/Telemetrie', 'Drehzahl-Telemetrie bricht nach Gaskappung sofort ab', 'Von ' + f0(m.hs_at_cut) + ' auf 0 in ' + f1(m.spool_down_s) + ' s - ein freilaufender Rotor kann das physikalisch kaum. Entweder meldet der ESC nach der Gaskappung keine RPM mehr, oder er bremst den Rotor aktiv.',
+        'Stoppuhr-Test am Boden: laeuft der Rotor mehrere Sekunden aus -> nur Telemetrie. Steht er in unter 1 s -> Bremse im ESC abschalten. Beachte: bei Autorotationsuebungen waere die RPM-Anzeige dann blind.');
+    } else if (fin(m.spool_down_s)) {
+      add('info', 'Governor', 'Hoch-/Auslauf', 'Hochlauf auf 95 % des Ziels: ' + fnum(m.spool_up_s, 1) + ' s; Auslauf nach Gaskappung: ' + fnum(m.spool_down_s, 1) + ' s.');
+    }
+    // ---------- Akku / ESC ----------
+    var vc = m.v_min_cell;
+    if (!m.hasElec) add('info', 'Akku', 'Keine Spannungs-/Stromdaten geloggt', 'In diesem Log fehlen Vbat/Ibat (Telemetrie-Felder nicht im Blackbox-Setup aktiv).', 'Optional: Blackbox-Felder fuer Spannung/Strom aktivieren, dann wird auch der Akku ausgewertet.');
+    else {
+    var ob2 = 'Start ' + f1(m.v_start) + ' V (' + m.cells + 'S angenommen), tiefster Wert unter Last ' + f1(m.v_min) + ' V (' + f2(vc) + ' V/Zelle), Spitzenstrom ' + f0(m.i_peak) + ' A, Spitzenleistung ' + f1(m.p_peak / 1000) + ' kW, Verbrauch ' + f0(m.mah) + ' mAh (' + f0(m.wh) + ' Wh).';
+    if (vc < T.vcell_load_warn) add('warn', 'Akku', 'Starker Spannungseinbruch unter Last', ob2, 'Akku/Kabel/Stecker pruefen, groesseren oder frischeren Akku verwenden, Flugzeit kuerzen.');
+    else if (vc < T.vcell_load_hint) add('hint', 'Akku', 'Spannung bricht unter Last spuerbar ein', ob2, 'Beobachten: verschlechtert sich der Wert ueber mehrere Fluege, ist der Akku am Ende.');
+    else add('ok', 'Akku', 'Spannungseinbruch unkritisch', ob2);
+    if (fin(m.v_rest_cell)) {
+      var r = m.v_rest_cell;
+      if (r < T.vcell_rest_low) add('hint', 'Akku', 'Akku tief entladen gelandet', 'Ruhespannung nach der Landung ' + f2(r) + ' V/Zelle.', 'Flugzeit kuerzen oder Akku frueher wechseln (Richtwert: ab etwa 3,7-3,8 V/Zelle Ruhespannung landen).');
+      else add('ok', 'Akku', 'Landung mit Reserve', 'Ruhespannung nach der Landung ' + f2(r) + ' V/Zelle.');
+    }
+    }
+    var te = m.t_esc_max;
+    if (!fin(te)) add('info', 'ESC', 'ESC-Temperatur nicht geloggt', 'ESC-Temperatursensor nicht im Log vorhanden. Aktiviere ESC-Telemetrie fuer Temperaturueberwachung.');
+    else {
+      var ob3 = 'ESC-Temperatur: Start ' + f0(m.t_esc_start) + ' C, Maximum ' + f0(te) + ' C (Anstieg ' + f0(te - m.t_esc_start) + ' C).';
+      if (te >= T.esc_temp_warn) add('warn', 'ESC', 'ESC sehr heiss', ob3, 'Kuehlung/Luftfuehrung verbessern, Flugzeit oder Last reduzieren. Grenzwerte haengen vom ESC ab - Datenblatt pruefen.');
+      else if (te >= T.esc_temp_hint) add('hint', 'ESC', 'ESC wird warm', ob3, 'Trend ueber mehrere Fluege beobachten (Kuehlung, Aussentemperatur, mittlere Leistung).');
+      else add('ok', 'ESC', 'ESC-Temperatur unkritisch', ob3);
+    }
+    // ---------- Antrieb ----------
+    var mo = m.mot;
+    if (mo) {
+      var ob4 = 'Motor-Ausgang im stabilen Flug im Mittel ' + f1(mo.mean) + ' % (mittlere Reserve ' + f1(mo.reserve) + ' %), Spitze ' + f1(mo.peak) + ' % bei ' + f0(mo.t_peak) + ' s, ' + f1(mo.near) + ' % der Zeit ueber 95 % (Quelle: ' + mo.src + ').';
+      if (mo.near >= 10 || mo.peak >= 99) add('warn', 'Antrieb', 'Antrieb am Limit', ob4, 'Der Governor verlangt mehr Leistung als der Antrieb liefert: Uebersetzung/Ritzel, Motor, Akku (Spannung/Strom) oder Headspeed pruefen.');
+      else if (mo.near >= 2 || mo.reserve < 20) add('hint', 'Antrieb', 'Wenig Leistungsreserve', ob4, 'Reserve beobachten; bei Drehzahleinbruechen unter Last Uebersetzung/Akku pruefen.');
+      else add('ok', 'Antrieb', 'Gesunde Leistungsreserve', ob4);
+    }
+    // ---------- Servos ----------
+    var bad = [], names = { 0: 'Servo 1', 1: 'Servo 2', 2: 'Servo 3', 3: 'Heck-Servo/Servo 4' };
+    Object.keys(m.servo).forEach(function (k) { var s = m.servo[k], w = Math.max(s.pct_lo, s.pct_hi); if (w >= T.servo_limit_pct_warn) bad.push([k, w]); });
+    if (bad.length) add('warn', 'Servos', 'Servo laeuft laenger am Endanschlag', bad.map(function (b) { return names[b[0]] + ': ' + f1(b[1]) + ' % der Zeit'; }).join(', '), 'Servoweg/Mixer-Limits, Taumelscheiben-Geometrie und Kollektiv-Range pruefen; beim Heck: Hebelarm/Weg und Yaw-Gain.');
+    else { var mx = 0; Object.keys(m.servo).forEach(function (k) { mx = Math.max(mx, m.servo[k].pct_lo, m.servo[k].pct_hi); }); add('ok', 'Servos', 'Kein Servo dauerhaft am Anschlag', 'Hoechster Wert: ' + f2(mx) + ' % der Zeit am Anschlag.'); }
+    // ---------- Hover ----------
+    if (m.hover_peaks.length) {
+      var pk = m.hover_peaks.slice(0, 3).map(function (p) { return p[0] + ' ' + f1(p[1]) + ' Hz (' + f1(p[2]) + 'x ueber Grundpegel)'; }).join(', ');
+      add('hint', 'Hover', 'Deutlicher Resonanzpeak im Schwebeflug', 'Bei ruhigen Sticks hebt sich im Gyro-Spektrum eine klare Spitze ab: ' + pk + '.',
+        'Eine echte Resonanz zeigt sich als Spitze, nicht als glatter Anstieg zu tiefen Frequenzen. Tritt sie bei gleicher Frequenz in mehreren Fluegen auf, ist die Mechanik (Lager, Spiel, Blattspurlauf, Rahmen) der erste Verdaechtige.');
+    } else if (fin(m.wobble)) {
+      add('ok', 'Hover', 'Kein Resonanzpeak im Schwebeflug', 'Das Gyro-Spektrum bei ruhigen Sticks faellt glatt ab, ohne herausragende Spitze (Eigenbewegung im Band 2-8 Hz: ' + f1(m.wobble) + ' deg/s RMS). Das ist normale Flugbewegung/Wind, keine Resonanz.');
+    }
+    // ---------- Signal ----------
+    var sig = [];
+    if (m.rx_loss > 0) sig.push(m.rx_loss + ' Samples ohne Empfaengersignal im Flug');
+    if (m.failsafe_active) sig.push('Failsafe war im Flug aktiv');
+    if (m.v_zero > 0) sig.push(m.v_zero + ' Samples mit Spannung 0 (Telemetrie-Aussetzer)');
+    if (sig.length) add('warn', 'Signal', 'Funk-/Telemetrieprobleme', sig.join('; '), 'Antennenposition, Empfaengerversorgung, Telemetrie-Verkabelung pruefen.');
+    else add('ok', 'Signal', 'Funk und Telemetrie sauber', 'Keine Empfaengeraussetzer, kein Failsafe, keine Spannungs-Nullwerte.');
+    if (m.escthr_dead && !m.mot) add('info', 'Antrieb', 'Kein Gas-Wert im Log', 'Weder der ESC noch der Flugregler (motor[0]) liefern einen Gas-Wert, daher ist keine Aussage zur Leistungsreserve moeglich.');
+    return F;
+  }
+  function overallState(F) { var s = 3; F.forEach(function (f) { s = Math.min(s, SEV_ORDER[f.sev]); }); return { 0: 'warn', 1: 'hint', 2: 'ok', 3: 'ok' }[s]; }
+
+  function makePidRecommendations(m) {
+    var hdr = m.hdr || {}, recs = [], roll = A.pidParts(hdr.rollPID), pitch = A.pidParts(hdr.pitchPID), yaw = A.pidParts(hdr.yawPID), gov = A.pidParts(hdr.govPID);
+    function rv(v) { return Math.round(v); }
+    function adj(v, d) { return (isNaN(v)) ? null : Math.max(0, Math.round(v + d)); }
+    var track = m.track || {};
+    [['Roll', roll, 'roll'], ['Nick', pitch, 'pitch'], ['Gier', yaw, 'yaw']].forEach(function (ax) {
+      var axis = ax[0], pid = ax[1], pfx = ax[2];
+      if (!track[axis]) return;
+      var med = track[axis][0], p95 = track[axis][1], n = track[axis][2], D = pid[2], Fv = pid[3], cli = [], obs;
+      if (med > 80 || p95 > 200) {
+        obs = 'Regelabweichung ' + axis + ': Median ' + f0(med) + ' deg/s, 95-%-Wert ' + f0(p95) + ' deg/s (' + n + ' Samples). Beides deutlich erhoeht: Feedforward zu schwach oder D zu niedrig.';
+        if (!isNaN(Fv)) cli.push('set ' + pfx + '_f_gain = ' + adj(Fv, Math.max(5, Math.round(Fv * 0.15))) + '  # war ' + rv(Fv) + ', +15 % - Feedforward staerken');
+        if (!isNaN(D) && D >= 5) cli.push('set ' + pfx + '_d_gain = ' + adj(D, Math.max(3, Math.round(D * 0.10))) + '  # war ' + rv(D) + ', +10 % - Daempfung erhoehen');
+      } else if (p95 > 120) {
+        obs = 'Regelabweichung ' + axis + ': Median ' + f0(med) + ' deg/s (OK), 95-%-Wert ' + f0(p95) + ' deg/s erhoeht (' + n + ' Samples). Spitzen deuten auf schwaches Feedforward hin.';
+        if (!isNaN(Fv)) cli.push('set ' + pfx + '_f_gain = ' + adj(Fv, Math.max(3, Math.round(Fv * 0.10))) + '  # war ' + rv(Fv) + ', +10 % - Feedforward leicht staerken');
+      } else return;
+      recs.push({ area: 'PID ' + axis, title: axis + ': Feedforward/D-Gain anpassen', obs: obs, cli: cli });
+    });
+    var g = m.gov || {};
+    if (g.rate !== undefined && g.p01 < -60) {
+      var P = gov[0], Fv2 = gov[3], cli2 = [];
+      if (!isNaN(Fv2)) cli2.push('set gov_f_gain = ' + adj(Fv2, Math.max(5, Math.round(Fv2 * 0.12))) + '  # war ' + rv(Fv2) + ', +12 % - Last-Vorsteuerung staerken');
+      if (!isNaN(P)) cli2.push('set gov_p_gain = ' + adj(P, Math.max(3, Math.round(P * 0.10))) + '  # war ' + rv(P) + ', +10 % - falls F allein nicht reicht');
+      recs.push({ area: 'PID Governor', title: 'Governor-Droop: Gain erhoehen', obs: 'Governor: 1-%-Wert der Drehzahlabweichung ' + f0(g.p01) + ' U/min unter Ziel (' + f0(m.target) + ' U/min). Einbrechen unter Last deutet auf zu niedrigen Governor-Gain oder Vorsteuerung (F-Gain / Precomp).', cli: cli2 });
+    }
+    if (g.rate !== undefined && g.p99 > T.over_p99_hint) {
+      var F3 = gov[3], cli3 = [];
+      if (!isNaN(F3) && g.p99 > T.over_p99_hint * 1.5) cli3.push('set gov_f_gain = ' + adj(F3, -Math.max(3, Math.round(F3 * 0.10))) + '  # war ' + rv(F3) + ', -10 % - Vorsteuerung zuruecknehmen');
+      recs.push({ area: 'PID Governor', title: 'Governor-Ueberschwingen: Gain reduzieren', obs: 'Governor: 99-%-Wert der Drehzahlabweichung +' + f0(g.p99) + ' U/min ueber Ziel. Ueberschwingen nach Lastabnahme - Governor-F-Gain oder Vorsteuerung zu hoch.', cli: cli3 });
+    }
+    var y = m.yaw || {};
+    if ((y.max || 0) >= T.yaw_spike_hint && (y.ratio || 0) >= T.yaw_axis_ratio) {
+      var Py = yaw[0], cli4 = [];
+      if (!isNaN(Py)) { var d = -Math.max(3, Math.round(Py * 0.12)); cli4.push('set yaw_p_gain = ' + Math.max(5, Math.round(Py + d)) + '  # war ' + rv(Py) + ', ' + (d >= 0 ? '+' : '') + d + ' - Yaw-P senken'); }
+      var sg = parseFloat(hdr.yaw_stop_gain); if (!isNaN(sg)) cli4.push('set yaw_stop_gain = ' + Math.max(5, Math.round(sg * 0.88)) + '  # war ' + Math.trunc(sg) + ', -12 % - Stop-Gain senken');
+      recs.push({ area: 'PID Heck', title: 'Yaw-P/Stop-Gain senken', obs: 'Heck-Schwingung bei ruhigem Stick: Maximum ' + f0(y.max) + ', Spitze bei ' + f1(y.f_max || 0) + ' Hz, achsenspezifisch (Yaw-Achse ' + f1(y.ratio || 0) + 'x staerker). Typisches Zeichen fuer zu hohes Yaw-P oder Yaw-Stop-Gain.', cli: cli4 });
+    }
+    var main = (m.target || 0) / 60;
+    (m.hover_peaks || []).slice(0, 3).forEach(function (p) {
+      var lab = p[0], freq = p[1], prom = p[2], cause, action, cli = [];
+      var near1 = main > 0 && Math.abs(freq - main) <= 4, near2 = main > 0 && Math.abs(freq - 2 * main) <= 4;
+      if (near1) { cause = 'nahe 1/rev des Hauptrotors (' + f1(main) + ' Hz bei ' + f0(m.target) + ' U/min) - typisch fuer Rotor-Unwucht oder Spurlauf-Fehler'; action = 'Zuerst Mechanik: Blatt-/Kopf-Wucht pruefen, dann erneut fliegen. Ist der Peak nach der Wuchtung weg, ist kein Filter noetig. Bleibt er: RPM-Filter auf diesen Bereich einstellen.'; }
+      else if (near2) { cause = 'nahe 2/rev des Hauptrotors (' + f1(2 * main) + ' Hz) - kann Spurlauf-Fehler oder Taumelscheiben-Asymmetrie sein'; action = 'Spurlauf aller Blaetter ueberpruefen, dann Wucht-Test.'; }
+      else if (freq >= 20 && freq <= 200) { cause = 'moeglicherweise Motorfrequenz oder Getriebe-Harmonie bei ' + f1(freq) + ' Hz'; action = 'Notch-Filter bei dieser Frequenz erwaegen: gyro_notch1_hz oder dyn_notch_min_hz pruefen. Erst Quelle identifizieren (drehzahlabhaengig?), dann filtern.';
+        cli = ['# Vorschlag: Notch-Filter bei ' + f0(freq) + ' Hz (Q=3) - erst Ursache pruefen!', 'set gyro_notch1_hz = ' + Math.round(freq), 'set gyro_notch1_cutoff = ' + Math.round(freq / (1 + 1 / 3))]; }
+      else return;
+      recs.push({ area: 'Filter', title: 'Peak bei ' + f1(freq) + ' Hz (' + lab + ')', obs: 'Gyro-Spektrum-Peak (' + lab + ') bei ' + f1(freq) + ' Hz, ' + f1(prom) + 'x ueber Grundpegel. Ursache: ' + cause + '. ' + action, cli: cli });
+    });
+    return recs;
+  }
+  var api = { makeFindings: makeFindings, overallState: overallState, makePidRecommendations: makePidRecommendations, SEV_ORDER: SEV_ORDER, SEV_LABEL: SEV_LABEL };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RFF = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Kleine Canvas-Diagramm-Bibliothek (dunkles Theme, Touch-tauglich). Keine Abhaengigkeiten. */
+(function (root) {
+  'use strict';
+  var TH = { bg: '#0e1424', panel: '#121a2e', grid: 'rgba(159,176,216,.14)', axis: '#2a3552', text: '#d5dcee', mut: '#8d98b3' };
+  var C = { blue: '#60a5fa', orange: '#fb923c', green: '#34d399', red: '#f87171', grey: '#94a3b8', purple: '#a78bfa', yellow: '#fbbf24' };
+  var FONT = '11px Inter,"Segoe UI",system-ui,sans-serif';
+
+  function niceStep(range, n) {
+    var raw = range / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+    return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+  }
+  function ticks(lo, hi, n) {
+    var st = niceStep(hi - lo, n), a = Math.ceil(lo / st - 1e-9) * st, out = [];
+    for (var v = a; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+    return { t: out, step: st };
+  }
+  function fmt(v, step) { var d = step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step))); if (Math.abs(v) >= 10000) return (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'k'; return v.toFixed(d); }
+  function ext(series, key, log) {
+    var lo = Infinity, hi = -Infinity;
+    series.forEach(function (s) { var a = s[key]; if (!a) return; for (var i = 0; i < a.length; i++) { var v = a[i]; if (v === v && isFinite(v) && (!log || v > 0)) { if (v < lo) lo = v; if (v > hi) hi = v; } } });
+    return [lo, hi];
+  }
+  // Min/Max-Dezimierung: erhaelt Spitzen bei vielen Punkten
+  function decimate(x, y, w, x0, x1) {
+    var n = x.length, i0 = 0, i1 = n;
+    if (n < w * 3) return [x, y];
+    var ox = [], oy = [], span = (x1 - x0) / w, b = -1, mn, mx, imn, imx;
+    function flush() { if (b < 0) return; if (imn < imx) { ox.push(x[imn], x[imx]); oy.push(y[imn], y[imx]); } else if (imn > imx) { ox.push(x[imx], x[imn]); oy.push(y[imx], y[imn]); } else { ox.push(x[imn]); oy.push(y[imn]); } }
+    for (var i = i0; i < i1; i++) {
+      var v = y[i]; if (v !== v) continue;
+      var bk = Math.floor((x[i] - x0) / span);
+      if (bk !== b) { flush(); b = bk; mn = mx = v; imn = imx = i; }
+      else { if (v < mn) { mn = v; imn = i; } if (v > mx) { mx = v; imx = i; } }
+    }
+    flush(); return [ox, oy];
+  }
+  function dash(ctx, d) { ctx.setLineDash(d === 'dash' ? [5, 4] : d === 'dot' ? [2, 3] : []); }
+
+  // ---- ein Panel zeichnen ----
+  function panel(ctx, box, o) {
+    var ml = 50, mr = o.y2 ? 46 : 12, mt = o.title ? 24 : 8, mb = o.xlabel ? 36 : (o.xticks === false ? 6 : 22);
+    var px = box.x + ml, py = box.y + mt, pw = box.w - ml - mr, ph = box.h - mt - mb;
+    if (pw < 20 || ph < 20) return;
+    var S = o.series || [], left = S.filter(function (s) { return s.axis !== 'y2'; }), right = S.filter(function (s) { return s.axis === 'y2'; });
+    var xr = o.xlim || (function () { var e = ext(S.filter(function (s) { return !s.bars; }).concat(S.filter(function (s) { return s.bars; })), 'x'); return e; })();
+    if (!(xr[1] > xr[0])) xr = [xr[0] - 1, xr[0] + 1];
+    function yRange(arr, lim, log) {
+      if (lim) return lim.slice();
+      var e = ext(arr, 'y', log); if (!isFinite(e[0])) return [0, 1];
+      (o.hlines || []).forEach(function (h) { if (!h.right && !log) { e[0] = Math.min(e[0], h.y); e[1] = Math.max(e[1], h.y); } });
+      if (log) return [Math.pow(10, Math.floor(Math.log10(e[0]))), Math.pow(10, Math.ceil(Math.log10(e[1]) + 0.05))];
+      if (arr.some(function (s) { return s.bars; })) e[0] = Math.min(0, e[0]);
+      var pad = (e[1] - e[0]) * 0.06 || 1; return [e[0] - (o.padLow === false ? 0 : pad), e[1] + pad];
+    }
+    var yl = yRange(left, o.ylim, o.ylog), yr = right.length ? yRange(right, o.y2lim, false) : null;
+    function X(v) { return px + (v - xr[0]) / (xr[1] - xr[0]) * pw; }
+    function Yl(v) { if (o.ylog) { v = Math.max(v, yl[0]); return py + ph - (Math.log10(v) - Math.log10(yl[0])) / (Math.log10(yl[1]) - Math.log10(yl[0])) * ph; } return py + ph - (v - yl[0]) / (yl[1] - yl[0]) * ph; }
+    function Yr(v) { return py + ph - (v - yr[0]) / (yr[1] - yr[0]) * ph; }
+    ctx.save(); ctx.font = FONT;
+    ctx.fillStyle = TH.panel; ctx.fillRect(px, py, pw, ph);
+    // Spans
+    (o.spans || []).forEach(function (s) { ctx.fillStyle = s.color; ctx.fillRect(Math.max(px, X(s.x0)), py, Math.min(px + pw, X(s.x1)) - Math.max(px, X(s.x0)), ph); });
+    // Bild (Spektrogramm)
+    if (o.image) { ctx.imageSmoothingEnabled = false; ctx.drawImage(o.image.canvas, X(o.image.x0), py, X(o.image.x1) - X(o.image.x0), ph); }
+    // Gitter + Ticks
+    ctx.strokeStyle = TH.grid; ctx.lineWidth = 1; ctx.fillStyle = TH.mut; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    if (!o.image) {
+      if (o.ylog) { for (var d = Math.log10(yl[0]); d <= Math.log10(yl[1]) + 1e-9; d++) { var yy = Yl(Math.pow(10, d)); ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(px + pw, yy); ctx.stroke(); ctx.fillText('1e' + d, px - 5, yy); } }
+      else { var ty = ticks(yl[0], yl[1], Math.max(2, Math.floor(ph / 38))); ty.t.forEach(function (v) { var yy2 = Yl(v); ctx.beginPath(); ctx.moveTo(px, yy2); ctx.lineTo(px + pw, yy2); ctx.stroke(); ctx.fillText(fmt(v, ty.step), px - 5, yy2); }); }
+    } else { var tyi = ticks(o.ylim[0], o.ylim[1], 4); tyi.t.forEach(function (v) { ctx.fillText(fmt(v, tyi.step), px - 5, py + ph - (v - o.ylim[0]) / (o.ylim[1] - o.ylim[0]) * ph); }); }
+    if (yr) { ctx.textAlign = 'left'; var t2 = ticks(yr[0], yr[1], Math.max(2, Math.floor(ph / 38))); t2.t.forEach(function (v) { ctx.fillText(fmt(v, t2.step), px + pw + 5, Yr(v)); }); }
+    var tx = ticks(xr[0], xr[1], Math.max(3, Math.floor(pw / 80)));
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    tx.t.forEach(function (v) { var xx = X(v); if (!o.image) { ctx.beginPath(); ctx.moveTo(xx, py); ctx.lineTo(xx, py + ph); ctx.stroke(); } if (o.xticks !== false) ctx.fillText(fmt(v, tx.step), xx, py + ph + 4); });
+    // Serien
+    ctx.save(); ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
+    S.forEach(function (s) {
+      var Y = s.axis === 'y2' ? Yr : Yl; ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width || 1.2; dash(ctx, s.dash);
+      if (s.bars) {
+        var bw = Math.max(1, (s.bw || 1) / (xr[1] - xr[0]) * pw - 1), base = o.ylog ? py + ph : Y(0);
+        ctx.globalAlpha = s.alpha || 0.85; for (var i = 0; i < s.x.length; i++) { if (!(s.y[i] > 0) && o.ylog) continue; var yy3 = Y(s.y[i]); ctx.fillRect(X(s.x[i]) - bw / 2, Math.min(yy3, base), bw, Math.abs(base - yy3)); } ctx.globalAlpha = 1;
+      } else if (s.points) {
+        for (var k = 0; k < s.x.length; k++) { ctx.beginPath(); ctx.arc(X(s.x[k]), Y(s.y[k]), s.r || 2.2, 0, 6.3); ctx.fill(); }
+      } else if (s.vlines) {
+        ctx.globalAlpha = 0.75; for (var q = 0; q < s.x.length; q++) { ctx.beginPath(); ctx.moveTo(X(s.x[q]), Y(0)); ctx.lineTo(X(s.x[q]), Y(s.y[q])); ctx.stroke(); } ctx.globalAlpha = 1;
+        for (var q2 = 0; q2 < s.x.length; q2++) { ctx.beginPath(); ctx.arc(X(s.x[q2]), Y(s.y[q2]), 2.2, 0, 6.3); ctx.fill(); }
+      } else {
+        var dd = decimate(s.x, s.y, Math.max(40, Math.floor(pw)), xr[0], xr[1]), xs = dd[0], ys = dd[1], on = false;
+        ctx.beginPath(); var fx0 = null, fx1 = null; for (var j = 0; j < xs.length; j++) { var yv = ys[j]; if (yv !== yv || (o.ylog && !(yv > 0))) { on = false; continue; } var xp = X(xs[j]), yp = Y(yv); if (fx0 === null) fx0 = xp; fx1 = xp; if (!on) { ctx.moveTo(xp, yp); on = true; } else ctx.lineTo(xp, yp); } ctx.stroke();
+        if (s.fill && fx0 !== null) { ctx.lineTo(fx1, py + ph); ctx.lineTo(fx0, py + ph); ctx.closePath(); ctx.globalAlpha = 0.28; ctx.fill(); ctx.globalAlpha = 1; }
+      }
+    });
+    (o.hlines || []).forEach(function (h) { ctx.strokeStyle = h.color || TH.text; ctx.lineWidth = 1; dash(ctx, h.dash || 'dash'); var yy4 = h.right ? Yr(h.y) : Yl(h.y); ctx.beginPath(); ctx.moveTo(px, yy4); ctx.lineTo(px + pw, yy4); ctx.stroke(); });
+    (o.vlines || []).forEach(function (v) { ctx.strokeStyle = v.color || TH.text; ctx.lineWidth = 1.1; dash(ctx, v.dash || 'dot'); var xx = X(v.x); ctx.beginPath(); ctx.moveTo(xx, py); ctx.lineTo(xx, py + ph); ctx.stroke(); });
+    ctx.restore(); dash(ctx, '');
+    (o.vlines || []).forEach(function (v) { if (!v.label) return; ctx.fillStyle = v.color || TH.text; ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, Math.min(X(v.x) + 3, px + pw - 60), py + 3 + (v.row || 0) * 12); });
+    // Rahmen + Beschriftung
+    ctx.strokeStyle = TH.axis; ctx.strokeRect(px + .5, py + .5, pw, ph);
+    ctx.font = FONT; ctx.fillStyle = TH.text;
+    if (o.title) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = '600 12px Inter,sans-serif'; ctx.fillText(o.title, px + pw / 2, box.y + 15); ctx.font = FONT; }
+    ctx.fillStyle = TH.mut;
+    if (o.ylabel) { ctx.save(); ctx.translate(box.x + 11, py + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.ylabel, 0, 0); ctx.restore(); }
+    if (o.y2label && yr) { ctx.save(); ctx.translate(box.x + box.w - 8, py + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.y2label, 0, 0); ctx.restore(); }
+    if (o.xlabel) { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(o.xlabel, px + pw / 2, py + ph + 20); }
+    // Legende
+    var lg = S.filter(function (s) { return s.label; });
+    if (lg.length && o.legend !== false) {
+      var lw = 0; lg.forEach(function (s) { lw = Math.max(lw, ctx.measureText(s.label).width); }); lw += 30; var lh = lg.length * 14 + 6;
+      var lx = o.legend === 'left' ? px + 6 : px + pw - lw - 6, ly = o.legend === 'bottom' ? py + ph - lh - 4 : py + 5;
+      ctx.fillStyle = 'rgba(14,20,36,.78)'; ctx.fillRect(lx, ly, lw, lh);
+      lg.forEach(function (s, i) { var yy5 = ly + 10 + i * 14; ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = 2; dash(ctx, s.dash); ctx.beginPath(); ctx.moveTo(lx + 6, yy5); ctx.lineTo(lx + 22, yy5); ctx.stroke(); dash(ctx, ''); ctx.fillStyle = TH.text; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(s.label, lx + 26, yy5); });
+    }
+    ctx.restore();
+  }
+
+  // ---- Figur: Zeilen mit Panels, passt sich der Breite an ----
+  function figure(parent, spec) {
+    var wrap = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
+    wrap.appendChild(cv); if (spec.caption) { cap.textContent = spec.caption; wrap.appendChild(cap); }
+    parent.appendChild(wrap);
+    function layout(W) {
+      var rows = [], narrow = W < 640;
+      spec.rows.forEach(function (r) {
+        if (narrow && r.panels.length > 1) r.panels.forEach(function (p) { rows.push({ h: Math.max(r.h, 170), panels: [p], widths: [1] }); });
+        else rows.push(r);
+      });
+      return rows;
+    }
+    function draw() {
+      var W = Math.max(280, wrap.clientWidth - 24), rows = layout(W), H = rows.reduce(function (a, r) { return a + r.h; }, 0) + (spec.title ? 26 : 0), dpr = window.devicePixelRatio || 1;
+      cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = TH.bg; ctx.fillRect(0, 0, W, H);
+      var y = 0; if (spec.title) { ctx.fillStyle = TH.text; ctx.font = '600 13px Inter,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(spec.title, W / 2, 17); y = 26; }
+      rows.forEach(function (r) {
+        var tot = r.widths ? r.widths.reduce(function (a, b) { return a + b; }, 0) : r.panels.length, x = 0;
+        r.panels.forEach(function (p, i) { var w = W * (r.widths ? r.widths[i] : 1) / tot; panel(ctx, { x: x, y: y, w: w, h: r.h }, p); x += w; });
+        y += r.h;
+      });
+    }
+    draw(); var last = wrap.clientWidth, t;
+    window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(function () { if (wrap.clientWidth !== last) { last = wrap.clientWidth; draw(); } }, 120); });
+    return wrap;
+  }
+  // ---- Histogramm ----
+  function hist(vals, lo, hi, bins) { var cnt = new Float64Array(bins), cx = new Float64Array(bins), w = (hi - lo) / bins; for (var i = 0; i < bins; i++) cx[i] = lo + (i + .5) * w; for (var j = 0; j < vals.length; j++) { var v = vals[j]; if (v !== v) continue; v = Math.min(hi - 1e-9, Math.max(lo, v)); cnt[Math.floor((v - lo) / w)]++; } return { x: cx, y: cnt, w: w }; }
+  // ---- Colormaps (Spektrogramm) ----
+  var MAGMA = ['#000004', '#140e36', '#3b0f70', '#641a80', '#8c2981', '#b73779', '#de4968', '#f7705c', '#fe9f6d', '#fecf92', '#fcfdbf'];
+  var REDS = ['#0e1424', '#3d1a26', '#7a1d2a', '#b01e28', '#e0332c', '#ff6b5e', '#ffb3a7'];
+  function hex(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+  function cmap(stops, t) { t = Math.min(1, Math.max(0, t)); var x = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i, a = hex(stops[i]), b = hex(stops[i + 1]); return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; }
+  function heat(data, nx, ny, vmin, vmax, stops) { // data[x*ny + y]; y=0 unten
+    var c = document.createElement('canvas'); c.width = nx; c.height = ny; var g = c.getContext('2d'), im = g.createImageData(nx, ny);
+    for (var x = 0; x < nx; x++) for (var y = 0; y < ny; y++) { var col = cmap(stops, (data[x * ny + y] - vmin) / (vmax - vmin)), o = ((ny - 1 - y) * nx + x) * 4; im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = 255; }
+    g.putImageData(im, 0, 0); return c;
+  }
+  var api = { figure: figure, panel: panel, hist: hist, heat: heat, MAGMA: MAGMA, REDS: REDS, C: C, TH: TH };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Charts = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* Baut die Diagramme (Charts.figure) aus Analyse-Ergebnis m und Plot-Daten P. */
+(function (root) {
+  'use strict';
+  var Ch = (typeof require !== 'undefined' && typeof module !== 'undefined') ? require('./charts.js') : root.Charts, C = Ch.C;
+  var CAP = {
+    overview: 'Oben Drehzahl gegen Ziel, darunter Strom/Spannung, ESC-Temperatur und wie viel du an den Sticks gemacht hast. Gelb = Hochlauf. Gestrichelte Linien: staerkster Ueberschwinger (orange) und staerkste Heck-Schwingung (lila).',
+    governor: 'Links der groesste Drehzahl-Ausreisser im Detail (grau = Kollektiv-Stick). Rechts, wie oft welche Abweichung vom Ziel vorkam - logarithmisch, jede Stufe nach oben ist zehnmal mehr. Je steiler der Berg an der Null, desto besser haelt der Governor.',
+    load: 'Zeigt, bei welcher Kollektivstellung die Drehzahl vom Ziel abweicht. Hohe orange Maxima bei niedrigem/negativem Kollektiv = Drehzahl schiesst bei Lastabnahme hoch (Hinweis auf F-Gain/Vorsteuerung). Rote Einbrueche bei hohem Kollektiv = Last/Leistungsreserve.',
+    yaw: 'Links: jeder Strich = eine Sekunde mit ruhigem Gier-Stick; Striche ueber der orangen Linie sind auffaellig. Rechts das Spektrum im schlimmsten Moment: eine Spitze nur bei Gier (lila) = Regelkreis des Hecks schwingt.',
+    spectro: 'Zeit nach rechts, Frequenz nach oben, hell = stark. Die oberen drei Felder zeigen Roll, Nick und Gier; senkrechte helle Streifen in allen dreien sind Manoever und normal. Das rote Feld unten zeigt NUR, wo das Heck staerker schwingt als Roll/Nick.',
+    hover: 'Gyro-Spektrum nur aus ruhigen Schwebeflug-Phasen. Ein glatter Abfall nach rechts ist normale Bewegung/Wind. Nur eine echte Spitze (rot markiert) deutet auf eine Resonanz hin.',
+    servos: 'Wie oft welcher Stellwert vorkam (logarithmisch). Hohe Balken ganz am Rand = Servo laeuft am Anschlag.',
+    vib: 'Vibrations-Spektrum je Achse (Schwebeflug/ruhiger Flug bei stabiler Drehzahl). Orange = Rohsignal vor den Filtern, blau = nach den Filtern. Violette Linien markieren Vielfache der Kopfdrehzahl (1P, 2P, ...), gelb unterlegt ist der Bereich des dynamischen Notch, die rote Linie der Tiefpass 1. Je weiter blau unter orange, desto besser filtern die Filter - eine blaue Spitze ist uebrig gebliebene Vibration.',
+    viblevel: 'Vibrationspegel (Effektivwert oberhalb 20 Hz) ueber den Flug, vor und nach den Filtern, dazu die Kopfdrehzahl. Anstiege im Pegel bei Manoevern sind normal; ein dauerhaft hoher blauer Pegel deutet auf Restvibration hin.',
+    govterms: 'Oben die Drehzahl-Abweichung vom Ziel (grau: +-20 U/min). Darunter die Anteile des Governors am Gas-Ausgang: P reagiert auf die Abweichung, F ist die Vorsteuerung aus Kollektiv und Zyklik, D daempft. Unten der I-Anteil, der die Grundlast traegt und langsam nachregelt.',
+    power: 'Motor-Ausgang des Flugreglers, Strom, Spannung und ESC-Temperatur im Flug. Flache Spitzen an der roten Linie = Antrieb am Limit.',
+    battery: 'Links die Packspannung, rechts die Spannung pro Zelle ueber der verbrauchten Kapazitaet.' };
+  function masked(a, f) { var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = f(a[i]) ? a[i] : NaN; return o; }
+  function toArr(a) { return a; }
+  function hasData(a) { if (!a) return false; for (var i = 0; i < a.length; i += Math.max(1, a.length >> 6)) if (a[i] === a[i]) return true; return false; }
+
+  function overview(el, m, P) {
+    var t = P.t, xl = [t[0], t[t.length - 1]], spans = [], vl = [];
+    if (isFinite(m.spool_up_s)) spans.push({ x0: m.t0, x1: m.t0 + m.spool_up_s, color: 'rgba(251,191,36,.25)' });
+    if (m.gov.t_worst !== undefined) vl.push({ x: m.gov.t_worst, color: C.orange, label: 'staerkster Ueberschwinger', row: 0 });
+    if (m.yaw.t_max !== undefined) vl.push({ x: m.yaw.t_max, color: C.purple, label: 'staerkste Heck-Schwingung', row: 1 });
+    var base = { xlim: xl, spans: spans, vlines: vl, xticks: false };
+    function P1(o) { return Object.assign({}, base, o); }
+    Ch.figure(el, { caption: CAP.overview, rows: [
+      { h: 150, panels: [P1({ title: 'Flug auf einen Blick', ylabel: 'U/min', series: [{ x: t, y: P.hs, color: C.blue, label: 'Kopfdrehzahl' }, { x: t, y: masked(P.tgt, function (v) { return v > 0; }), color: C.orange, dash: 'dash', label: 'Governor-Ziel' }], legend: 'bottom' })] },
+      { h: 120, panels: [P1({ ylabel: 'Strom [A]', y2label: 'Spannung [V]', series: [{ x: t, y: P.I, color: C.red, width: .8 }, { x: t, y: P.V, color: C.green, axis: 'y2' }], y2: true, ylim: null })] },
+      { h: 100, panels: [P1({ ylabel: 'ESC [C]', series: [{ x: t, y: P.Tesc, color: C.purple }] })] },
+      { h: 110, panels: [P1({ ylabel: 'Stick-Aktivitaet', xlabel: 'Zeit [s]', xticks: true, series: [{ x: t, y: P.stick, color: C.grey, fill: true }] })] }] });
+  }
+  function governor(el, m, P) {
+    var g = m.gov, F = P.fl, left, right;
+    if (P.gwin) {
+      var w = P.gwin, ser = [{ x: w.t, y: w.hs, color: C.blue, label: 'Kopfdrehzahl' }, { x: w.t, y: w.tg, color: C.orange, dash: 'dash', label: 'Ziel' }];
+      if (w.rc3) ser.push({ x: w.t, y: w.rc3, color: C.grey, axis: 'y2', width: .8 });
+      left = { title: 'Groesster Ueberschwinger (+' + g.maxover.toFixed(0) + ' U/min)', xlabel: 'Zeit [s]', ylabel: 'U/min', y2label: w.rc3 ? 'Kollektiv-Stick' : null, y2: !!w.rc3, series: ser, legend: 'left' };
+      var h = Ch.hist(P.gerr, -200, 300, 70);
+      right = { title: 'Verteilung (log)', xlabel: 'Abweichung vom Ziel [U/min]', ylabel: 'Anzahl Samples (log)', ylog: true, series: [{ x: h.x, y: h.y, bars: true, bw: h.w, color: C.blue }], vlines: [{ x: 0, color: '#d5dcee', dash: '' }, { x: T().over_event_rpm, color: C.red, dash: 'dash' }], xlim: [-200, 300] };
+    } else {
+      left = { title: 'Variables Ziel - Ist (blau) und Ziel (orange)', xlabel: 'Zeit [s]', ylabel: 'U/min', series: [{ x: F.t, y: F.hs, color: C.blue, width: .8 }, { x: F.t, y: F.tg, color: C.orange, dash: 'dash', width: .8 }] };
+      var h2 = Ch.hist(P.gerr, -100, 100, 60);
+      right = { title: 'Abweichung Ist-Ziel', xlabel: 'U/min', series: [{ x: h2.x, y: h2.y, bars: true, bw: h2.w, color: C.blue }], xlim: [-100, 100] };
+    }
+    Ch.figure(el, { caption: CAP.governor, rows: [{ h: 230, widths: [1.6, 1], panels: [left, right] }] });
+  }
+  function T() { return (root.RFA || require('./analysis.js')).THRESH; }
+  function load(el, m, P) {
+    if (!P.load) return; var ok = P.load.filter(function (b) { return b.n > 50; }); if (ok.length < 2) return;
+    function col(k) { return Float64Array.from(ok.map(function (b) { return b[k]; })); }
+    var x = col('c');
+    Ch.figure(el, { caption: CAP.load, rows: [{ h: 230, widths: [1.7, 1], panels: [
+      { title: 'Drehzahlabweichung nach Kollektivstellung', xlabel: 'Kollektiv-Stick (negativ = Lastabnahme, positiv = Last)', ylabel: 'Abweichung vom Ziel [U/min]', legend: 'left',
+        series: [{ x: x, y: col('q95'), color: C.blue, width: .7, dash: 'dash' }, { x: x, y: col('q05'), color: C.blue, width: .7, dash: 'dash' }, { x: x, y: col('q50'), color: C.blue, width: 2, label: 'Median (gestrichelt: 90 % der Zeit)' },
+          { x: x, y: col('mx'), color: C.orange, label: 'Maximum (zu schnell)', width: 1.2 }, { x: x, y: col('mn'), color: C.red, label: 'Minimum (zu langsam)', width: 1.2 }], hlines: [{ y: 0, color: '#d5dcee', dash: '' }] },
+      { title: 'So lange war der Stick dort', xlabel: 'Kollektiv-Stick', ylabel: 'Zeit [s]', series: [{ x: x, y: Float64Array.from(ok.map(function (b) { return b.n / m.fs; })), bars: true, bw: 85, color: C.grey }] }] }] });
+  }
+  function yaw(el, m, P) {
+    var y = m.yaw; if (y.max === undefined) return; var th = T(), ys = P.yspec, ser = [];
+    var right = { title: 'Spektrum im staerksten Fenster (t=' + y.t_max.toFixed(0) + ' s)', xlabel: 'Hz', series: [], spans: [{ x0: 8, x1: 20, color: 'rgba(251,191,36,.2)' }], xlim: [2, 40] };
+    if (ys) [['Gier', 2, C.purple], ['Roll', 0, C.blue], ['Nick', 1, C.green]].forEach(function (a) { if (ys.sp[a[1]].length) right.series.push({ x: ys.f, y: ys.sp[a[1]], color: a[2], label: a[0], width: 1.4 }); });
+    Ch.figure(el, { caption: CAP.yaw, rows: [{ h: 230, widths: [1.4, 1], panels: [
+      { title: 'Heck-Schwingung bei ruhigem Gier-Stick (8-20 Hz)', xlabel: 'Zeit [s]', ylabel: 'Energie (a.u.)', series: [{ x: Float64Array.from(y.t), y: Float64Array.from(y.E), vlines: true, color: C.purple }],
+        hlines: [{ y: th.yaw_spike_hint, color: C.orange }, { y: th.yaw_spike_warn, color: C.red }], ylim: [0, Math.max(th.yaw_spike_warn * 1.1, Math.max.apply(null, y.E) * 1.1)] }, right] }] });
+  }
+  function spectro(el, m, P) {
+    var S = P.spectro; if (!S) return; var rows = [], names = ['Roll', 'Nick', 'Gier (Heck)'];
+    for (var k = 0; k < 3; k++) rows.push({ h: 105, panels: [{ ylabel: names[k] + '\nHz', xticks: false, xlim: [S.t0, S.t1], ylim: [S.f0, S.f1], hlines: [{ y: 8, color: '#9fb0d8', dash: 'dot' }, { y: 20, color: '#9fb0d8', dash: 'dot' }], image: { canvas: Ch.heat(S.logs[k], S.nx, S.ny, S.vmin, S.vmax, Ch.MAGMA), x0: S.t0, x1: S.t1 } }] });
+    rows.push({ h: 130, panels: [{ ylabel: 'nur Heck\nHz', xlabel: 'Zeit [s]', xlim: [S.t0, S.t1], ylim: [S.f0, S.f1], hlines: [{ y: 8, color: '#9fb0d8', dash: 'dot' }, { y: 20, color: '#9fb0d8', dash: 'dot' }], image: { canvas: Ch.heat(S.only, S.nx, S.ny, 0, S.dmax, Ch.REDS), x0: S.t0, x1: S.t1 } }] });
+    Ch.figure(el, { title: 'Schwingungs-Karte (hell = starke Schwingung bei dieser Frequenz)', caption: CAP.spectro, rows: rows });
+  }
+  function hover(el, m, P) {
+    var H = m.hover_spec; if (!H) return; var x = [], k;
+    for (var j = 0; j < H.axes[0].length; j++) { var f = j * H.df; if (f > 1 && f < 60) x.push(j); }
+    var fx = Float64Array.from(x.map(function (j) { return j * H.df; })), ser = [];
+    [['Roll', C.blue], ['Nick', C.green], ['Gier', C.purple]].forEach(function (a, i) { ser.push({ x: fx, y: Float64Array.from(x.map(function (j) { return H.axes[i][j]; })), color: a[1], label: a[0], width: 1.4 }); });
+    Ch.figure(el, { caption: CAP.hover, rows: [{ h: 230, panels: [{ title: 'Gyro-Spektrum bei ruhigen Sticks (' + m.hover_n + ' Fenster)', xlabel: 'Hz', ylog: true, series: ser, spans: [{ x0: 2, x1: 8, color: 'rgba(251,191,36,.18)' }],
+      vlines: m.hover_peaks.slice(0, 3).map(function (p, i) { return { x: p[1], color: C.red, dash: 'dash', label: p[0] + ' ' + p[1].toFixed(1) + ' Hz', row: i }; }), xlim: [1, 60] }] }] });
+  }
+  function vibSpectrum(el, m, P) {
+    var V = m.vib; if (!V || !V.ok) return; var h = V.psdA[0].length, x = [], k, j;
+    for (j = 1; j < h; j++) x.push(j * V.df); var fx = Float64Array.from(x);
+    var rows = [], S = V.set;
+    for (k = 0; k < 3; k++) {
+      var a = Float64Array.from(x.map(function (_, i) { return Math.sqrt(V.psdA[k][i + 1]); })), ser = [];
+      if (V.hasRaw) ser.push({ x: fx, y: Float64Array.from(x.map(function (_, i) { return Math.sqrt(V.psdR[k][i + 1]); })), color: C.orange, width: 1, label: k === 0 ? 'vor den Filtern' : null });
+      ser.push({ x: fx, y: a, color: C.blue, width: 1.3, label: k === 0 ? 'nach den Filtern' : null });
+      var vl = []; for (var n = 1; n * V.fh < V.nyq; n++) vl.push({ x: n * V.fh, color: 'rgba(167,139,250,.55)', dash: 'dot', label: n <= 8 ? n + 'P' : null, row: 0 });
+      if (V.lp_on) vl.push({ x: S.lpf1, color: C.red, dash: 'dash', label: 'Tiefpass 1', row: 1 });
+      var sp = (S.dn_count > 0 && S.dn_max > S.dn_min) ? [{ x0: S.dn_min, x1: Math.min(S.dn_max, V.nyq), color: 'rgba(251,191,36,.08)' }] : [];
+      rows.push({ h: 175, panels: [{ title: k === 0 ? 'Vibrations-Spektrum (Amplitude, log)' : null, ylabel: ['Roll', 'Nick', 'Gier'][k] + ' [deg/s/\u221aHz]', xlabel: k === 2 ? 'Frequenz [Hz]' : null, xticks: k === 2, ylog: true, ylim: [1e-2, 1e2], xlim: [0, V.nyq], series: ser, vlines: vl, spans: sp, legend: k === 0 ? 'left' : false }] });
+    }
+    Ch.figure(el, { caption: CAP.vib, rows: rows });
+  }
+  function vibLevel(el, m, P) {
+    var V = m.vib; if (!V || !V.ok) return; var L = V.lvl, ser = [];
+    if (V.hasRaw) ser.push({ x: L.t, y: L.raw, color: C.orange, width: 1, label: 'vor den Filtern' });
+    ser.push({ x: L.t, y: L.adc, color: C.blue, width: 1.3, label: 'nach den Filtern' }); ser.push({ x: L.t, y: L.hs, color: C.grey, width: .9, axis: 'y2', dash: 'dash', label: 'Kopfdrehzahl' });
+    Ch.figure(el, { caption: CAP.viblevel, rows: [{ h: 200, panels: [{ title: 'Vibrationspegel ueber den Flug', xlabel: 'Zeit [s]', ylabel: 'deg/s (> 20 Hz)', y2label: 'U/min', y2: true, series: ser, legend: 'left' }] }] });
+  }
+  function govTerms(el, m, P) {
+    var G = m.gtune; if (!G || !G.internal || !G.series) return; var S = G.series, xl = [S.t[0], S.t[S.t.length - 1]];
+    Ch.figure(el, { caption: CAP.govterms, rows: [
+      { h: 140, panels: [{ title: 'Governor-Anteile', xlim: xl, xticks: false, ylabel: 'Abweichung [U/min]', ylim: [-150, 250], series: [{ x: S.t, y: S.e, color: C.blue, width: .9 }], hlines: [{ y: 20, color: C.grey }, { y: -20, color: C.grey }, { y: 0, color: '#d5dcee', dash: '' }] }] },
+      { h: 130, panels: [{ xlim: xl, xticks: false, ylabel: 'P / D / F', series: [{ x: S.t, y: S.P, color: C.orange, width: .8, label: 'P' }, { x: S.t, y: S.F, color: C.green, width: 1.1, label: 'F (Vorsteuerung)' }, { x: S.t, y: S.D, color: C.purple, width: .8, label: 'D' }], legend: 'left' }] },
+      { h: 110, panels: [{ xlim: xl, xlabel: 'Zeit [s]', ylabel: 'I-Anteil', series: [{ x: S.t, y: S.I, color: C.red, width: 1.1 }] }] }] });
+  }
+  function servos(el, m, P) {
+    var panels = [], F = P.fl;
+    for (var k = 0; k < 4; k++) { var a = F.servo[k]; if (!a || !m.servo[k]) continue; var s = m.servo[k], h = Ch.hist(a, s.lo, s.hi + 1e-6, 60);
+      panels.push({ title: 'Servo ' + (k + 1) + (k === 3 ? ' (Heck)' : ''), xlabel: 'min ' + s.lo.toFixed(0) + '  max ' + s.hi.toFixed(0), ylog: true, series: [{ x: h.x, y: h.y, bars: true, bw: h.w, color: C.blue }], xlim: [s.lo, s.hi] }); }
+    if (!panels.length) return; Ch.figure(el, { caption: CAP.servos, rows: [{ h: 190, panels: panels }] });
+  }
+  function power(el, m, P) {
+    if (!m.mot) return; var F = P.fl, xl = [F.t[0], F.t[F.t.length - 1]];
+    Ch.figure(el, { caption: CAP.power, rows: [
+      { h: 150, panels: [{ title: 'Motor-Ausgang (rot = 95 %-Grenze), Strom und Spannung', xlim: xl, xticks: false, ylabel: 'Motor-Ausgang [%]', ylim: [0, 105], series: [{ x: F.t, y: F.mot, color: C.blue, width: .9 }], hlines: [{ y: 95, color: C.red }] }] },
+      { h: 120, panels: [{ xlim: xl, xticks: false, ylabel: 'Strom [A]', series: [{ x: F.t, y: F.I, color: C.red, width: .8 }] }] },
+      { h: 130, panels: [{ xlim: xl, xlabel: 'Zeit [s]', ylabel: 'Spannung [V]', y2label: 'ESC [C]', y2: true, series: [{ x: F.t, y: F.V, color: C.green }].concat(hasData(F.Tesc) ? [{ x: F.t, y: F.Tesc, color: C.purple, axis: 'y2', width: .9 }] : []) }] }] });
+  }
+  function battery(el, m, P) {
+    var F = P.fl, vs = (root.RFA || require('./analysis.js')).util.rollMedian(F.V, 25);
+    Ch.figure(el, { caption: CAP.battery, rows: [{ h: 220, widths: [1.6, 1], panels: [
+      { title: 'Spannung ueber den Flug', xlabel: 'Zeit [s]', ylabel: 'Packspannung [V]', legend: 'bottom', series: [{ x: F.t, y: F.V, color: C.grey, width: .5, label: 'roh' }, { x: F.t, y: vs, color: C.green, width: 1.4, label: 'geglaettet' }] },
+      { title: 'Entladekurve', xlabel: 'verbrauchte Kapazitaet [mAh]', ylabel: 'Spannung pro Zelle [V]', series: [{ x: Float64Array.from(m.curve[0]), y: Float64Array.from(m.curve[1]), color: C.blue, width: 1.6 }] }] }] });
+  }
+  var api = { overview: overview, governor: governor, load: load, yaw: yaw, spectro: spectro, hover: hover, vibSpectrum: vibSpectrum, vibLevel: vibLevel, govTerms: govTerms, servos: servos, power: power, battery: battery, CAP: CAP };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Figures = api;
+})(typeof self !== 'undefined' ? self : this);
+
+/* UI: Renderer (Port der Python-HTML-Funktionen), Reiter, Datei-Auswahl, Worker-Anbindung */
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); };
+  var SL = { warn: 'Handlungsbedarf', hint: 'Hinweis', ok: 'In Ordnung', info: 'Info' };
+  var RANK = { warn: 0, hint: 1, ok: 2, info: 3 };
+  var SEVO = { warn: 0, hint: 1, info: 2, ok: 3 };
+  var AREAS = ['Heck', 'Governor', 'Antrieb', 'Akku', 'ESC', 'Servos', 'Hover', 'Vibration', 'Signal'];
+  var PRIO = ['Heck', 'Governor', 'Antrieb', 'ESC/Telemetrie', 'Akku', 'ESC', 'Servos', 'Hover', 'Vibration', 'Signal', 'Log'];
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function nn(v) { return v === null || v === undefined || v !== v; }
+  function fnum(v, d, suf) { return nn(v) ? '-' : v.toFixed(d) + (suf || ''); }
+
+  function findingsHtml(F) {
+    return F.slice().sort(function (a, b) { return SEVO[a.sev] - SEVO[b.sev]; }).map(function (f) {
+      var todo = f.todo ? '<div class="todo"><b>Ansatz:</b> ' + esc(f.todo) + '</div>' : '';
+      return '<div class="find ' + f.sev + '"><span class="badge b-' + f.sev + '">' + SL[f.sev] + '</span><b>' + esc(f.area) + ': ' + esc(f.title) + '</b><p>' + esc(f.obs) + '</p>' + todo + '</div>';
+    }).join('');
+  }
+  function areaState(F, a) { var s = F.filter(function (f) { return f.area === a; }).map(function (f) { return f.sev; }); return s.length ? s.sort(function (x, y) { return RANK[x] - RANK[y]; })[0] : null; }
+  function cardsFor(F) {
+    return AREAS.map(function (a) {
+      var st = areaState(F, a); if (!st) return '';
+      var t = F.filter(function (f) { return f.area === a && f.sev === st; })[0].title;
+      return '<div class="card ' + st + '"><b>' + esc(a) + '</b>' + esc(t) + '</div>';
+    }).join('');
+  }
+  function fazitHtml(F) {
+    var n = { warn: 0, hint: 0, ok: 0, info: 0 }; F.forEach(function (f) { n[f.sev]++; });
+    var issues = F.filter(function (f) { return f.sev === 'warn' || f.sev === 'hint'; });
+    if (!issues.length) return '<div class="fazit ok"><b>Fazit:</b> Keine Auffaelligkeiten - alle Bereiche in Ordnung.</div>';
+    var pi = function (f) { var i = PRIO.indexOf(f.area); return i < 0 ? 99 : i; };
+    var top = issues.slice().sort(function (a, b) { return SEVO[a.sev] - SEVO[b.sev] || pi(a) - pi(b); })[0], step = '';
+    if (top.todo) step = '<br><b>Naechster Schritt:</b> ' + esc(top.todo.split(/(?<=[.!?])\s/)[0]);
+    return '<div class="fazit ' + (n.warn ? 'warn' : 'hint') + '"><b>Fazit:</b> ' + n.warn + 'x Handlungsbedarf, ' + n.hint + 'x Hinweis, ' + n.ok + 'x in Ordnung. <b>Wichtigster Punkt:</b> ' + esc(top.area) + ' - ' + esc(top.title) + '.' + step + '</div>';
+  }
+  function block(F, areas) {
+    var sub = F.filter(function (f) { return areas.indexOf(f.area) >= 0; });
+    return sub.length ? findingsHtml(sub) : '<div class="find info">Keine Auswertung fuer diesen Bereich (Daten fehlen im Log).</div>';
+  }
+  function sevOf(F, areas) {
+    var s = F.filter(function (f) { return areas.indexOf(f.area) >= 0; }).map(function (f) { return f.sev; });
+    return s.length ? s.sort(function (a, b) { return RANK[a] - RANK[b]; })[0] : 'none';
+  }
+  function kpis(m) {
+    var mo = m.mot, items = [
+      ['Flugzeit', m.flight_s.toFixed(0) + ' s', 'Ziel ' + m.target.toFixed(0) + ' U/min'],
+      m.hasElec ? ['Min. Spannung', m.v_min.toFixed(1) + ' V', m.v_min_cell.toFixed(2) + ' V/Zelle &middot; ' + m.cells + 'S'] : ['Min. Spannung', '&ndash;', 'nicht geloggt'],
+      m.hasElec ? ['Verbrauch', m.mah.toFixed(0) + ' mAh', m.wh.toFixed(0) + ' Wh'] : ['Verbrauch', '&ndash;', 'nicht geloggt'],
+      m.hasElec ? ['Spitzenstrom', m.i_peak.toFixed(0) + ' A', (m.p_peak / 1000).toFixed(1) + ' kW Spitze'] : ['Spitzenstrom', '&ndash;', 'nicht geloggt'],
+      ['Antriebsreserve', mo ? mo.reserve.toFixed(0) + ' %' : '&ndash;', mo ? 'Ausgang &oslash; ' + mo.mean.toFixed(0) + ' %' : 'kein Gas-Wert'],
+      ['ESC max.', nn(m.t_esc_max) ? '&ndash;' : m.t_esc_max.toFixed(0) + ' &deg;C', nn(m.t_esc_max) ? 'nicht geloggt' : 'Start ' + m.t_esc_start.toFixed(0) + ' &deg;C']];
+    return '<div class="kpis">' + items.map(function (a) { return '<div class="kpi"><b>' + a[0] + '</b><span>' + a[1] + '</span><small>' + a[2] + '</small></div>'; }).join('') + '</div>';
+  }
+  function pidHtml(R) {
+    if (!R.length) return '<div class="find ok"><span class="badge b-ok">In Ordnung</span><b>PID &amp; Filter</b><p>Keine konkreten Messhinweise auf PID- oder Filter-Probleme. Tracking, Governor und Spektrum sehen unauffaellig aus.</p></div>';
+    return R.map(function (r) {
+      var cli = r.cli && r.cli.length ? '<div class="todo"><b>CLI-Befehle (Rotorflight Configurator &rarr; CLI):</b><pre style="margin:6px 0 0;font-size:12px;background:#1e293b;color:#e2e8f0;padding:8px 12px;border-radius:6px;overflow-x:auto">' + esc(r.cli.join('\n')) + '</pre><span class="small">Einen Wert pro Flug aendern, danach erneut fliegen und vergleichen.</span></div>' : '';
+      if (r.note) cli += '<div class="todo"><b>Hinweis:</b> ' + esc(r.note) + '</div>';
+      return '<div class="find hint"><span class="badge b-hint">Empfehlung</span><b>' + esc(r.area) + ': ' + esc(r.title) + '</b><p>' + esc(r.obs) + '</p>' + cli + '</div>';
+    }).join('');
+  }
+  function settingsTable(h) {
+    var keys = ['Craft name', 'Firmware revision', 'Board name', 'govPID', 'rollPID', 'pitchPID', 'yawPID', 'yaw_stop_gain', 'yawBW', 'levelPID', 'rc_rates', 'rc_expo', 'motor_pwm_protocol', 'dshot_bidir'];
+    var rows = keys.filter(function (k) { return k in h; }).map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + esc(h[k]) + '</td></tr>'; }).join('');
+    return '<table>' + rows + '</table><div class="small">PID-Reihenfolge laut Rotorflight: P, I, D, F, B (Governor: P, I, D, F, Gesamt-Gain).</div>';
+  }
+  function detailTable(m) {
+    var r = [['Flugphase (Drehzahl erreicht bis Gaskappung)', m.flight_s.toFixed(0) + ' s'],
+      ['Zieldrehzahl', m.target.toFixed(0) + ' (' + (m.target_fixed ? 'fest' : 'variabel') + ')'],
+      ['Hochlauf auf 95 %', fnum(m.spool_up_s, 1, ' s')], ['Auslauf bis < 50 U/min', fnum(m.spool_down_s, 1, ' s')],
+      ['Strom Mittel / Spitze', !m.hasElec ? 'nicht geloggt' : m.i_mean.toFixed(0) + ' / ' + m.i_peak.toFixed(0) + ' A'],
+      ['Leistung Mittel / Spitze', !m.hasElec ? 'nicht geloggt' : m.p_mean.toFixed(0) + ' / ' + m.p_peak.toFixed(0) + ' W'],
+      ['Verbrauch', !m.hasElec ? 'nicht geloggt' : m.mah.toFixed(0) + ' mAh / ' + m.wh.toFixed(0) + ' Wh'],
+      ['Spannung Start / Minimum / Ruhe nach Landung', !m.hasElec ? 'nicht geloggt' : m.v_start.toFixed(2) + ' V (' + (m.v_start / m.cells).toFixed(2) + ' V/Zelle) / ' + m.v_min.toFixed(2) + ' V (' + m.v_min_cell.toFixed(2) + ' V/Zelle) / ' + fnum(m.v_rest_cell, 2) + ' V/Zelle Ruhe'],
+      ['ESC-Temperatur Start / Max', nn(m.t_esc_max) ? 'nicht geloggt' : m.t_esc_start.toFixed(0) + ' / ' + m.t_esc_max.toFixed(0) + ' C'],
+      ['Stick-Aktivitaet Roll/Nick/Gier (mittl. |Auslenkung|)', m.stick_activity.toFixed(1) + ' (Skala 0-500)']];
+    Object.keys(m.track).forEach(function (lab) { var t = m.track[lab]; r.push(['Regelabweichung ' + lab + ' (Soll>150 deg/s)', 'Median ' + t[0].toFixed(0) + ', 95 % ' + t[1].toFixed(0) + ' deg/s (' + t[2] + ' Samples)']); });
+    return '<table>' + r.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</table>';
+  }
+
+  function vibTable(V) {
+    if (!V || !V.ok) return '';
+    var h = '<h3>Vibrationspegel je Frequenzband (deg/s, Effektivwert)</h3><table><tr><th>Achse</th>' + V.bands.map(function (b) { return '<th>' + b[0].toFixed(0) + '-' + (b[1] > 900 ? 'max' : b[1].toFixed(0)) + ' Hz</th>'; }).join('') + '</tr>';
+    ['Roll', 'Nick', 'Gier'].forEach(function (a, k) { h += '<tr><td>' + a + (V.hasRaw ? ' (roh / gefiltert)' : ' (gefiltert)') + '</td>' + V.bands.map(function (b, i) { return '<td>' + (V.hasRaw ? V.rmsR[k][i].toFixed(1) + ' / ' : '') + V.rmsA[k][i].toFixed(1) + '</td>'; }).join('') + '</tr>'; });
+    h += '</table>';
+    if (V.peaks.length) {
+      h += '<h3>Gefundene Spitzen</h3><table><tr><th>Frequenz</th><th>Zuordnung</th><th>Achse</th>' + (V.hasRaw ? '<th>roh</th>' : '') + '<th>gefiltert</th>' + (V.hasRaw ? '<th>D&auml;mpfung</th>' : '') + '</tr>';
+      V.peaks.forEach(function (p) {
+        h += '<tr><td>' + p.f.toFixed(1) + ' Hz</td><td>' + (p.n ? p.n + 'P Hauptrotor' : 'fest / unbekannt') + '</td><td>' + ['Roll', 'Nick', 'Gier'].filter(function (a, i) { return p.axes[i]; }).join('/') + '</td>' +
+          (V.hasRaw ? '<td>' + p.ampR.toFixed(1) + '</td>' : '') + '<td>' + p.ampA.toFixed(1) + '</td>' + (V.hasRaw ? '<td>' + p.att.toFixed(0) + ' dB</td>' : '') + '</tr>';
+      });
+      h += '</table><div class="small">Amplituden in deg/s. Kopfdrehzahl ' + V.hs.toFixed(0) + ' U/min = ' + V.fh.toFixed(1) + ' Hz (1P). Spektrum aus ' + V.nWin + ' Fenstern mit stabiler Drehzahl, Aufl&ouml;sung ' + V.df.toFixed(2) + ' Hz.</div>';
+    }
+    return h;
+  }
+  /* Reiter: html = String, figs = [fn(el)] werden nach dem Einfuegen gezeichnet */
+  function buildTabs(it) {
+    var m = it.m;
+    if (!m.ok) return [{ title: 'Info', sev: 'info', html: '<div class="find info">' + esc(m.error || '') + '</div>', figs: [] }];
+    var F = it.F, R = it.R, P = it.P, Fg = Figures, tabs = [];
+    function add(title, sev, html, figs) { tabs.push({ title: title, sev: sev, html: html, figs: figs || [] }); }
+    var sub = '<div class="sub">Flugphase ' + m.flight_s.toFixed(0) + ' s | Ziel ' + m.target.toFixed(0) + ' U/min (' + (m.target_fixed ? 'fest' : 'variabel') + ')' + (m.hasElec ? ' | ' + m.mah.toFixed(0) + ' mAh' : '') + '</div>';
+    var f = function (fn) { return function (el) { fn(el, m, P); }; };
+    add('Übersicht', it.sev, sub + kpis(m) + fazitHtml(F) + '<div class="cards">' + cardsFor(F) + '</div><div class="figs"></div><h3>Signal / Telemetrie</h3>' + block(F, ['Signal', 'Log']), [f(Fg.overview)]);
+    add('Heck', sevOf(F, ['Heck']), block(F, ['Heck']) + '<div class="figs"></div>', [f(Fg.yaw), f(Fg.spectro)]);
+    add('Governor', sevOf(F, ['Governor', 'ESC/Telemetrie']), block(F, ['Governor', 'ESC/Telemetrie']) + (it.GR && it.GR.length ? '<h3>Governor-PID-Empfehlungen</h3>' + pidHtml(it.GR) : '') + '<div class="figs"></div>', [f(Fg.governor), f(Fg.load), f(Fg.govTerms)]);
+    add('Antrieb', sevOf(F, ['Antrieb', 'ESC']), block(F, ['Antrieb', 'ESC']) + '<div class="figs"></div>', [f(Fg.power)]);
+    if (m.hasElec) add('Akku', sevOf(F, ['Akku']), block(F, ['Akku']) + '<div class="figs"></div>', [f(Fg.battery)]);
+    add('Servos', sevOf(F, ['Servos']), block(F, ['Servos']) + '<div class="figs"></div>', [f(Fg.servos)]);
+    add('Vibration', sevOf(F, ['Hover', 'Vibration']), block(F, ['Vibration', 'Hover']) + (it.VR && it.VR.length ? '<h3>Filter-Empfehlungen</h3>' + pidHtml(it.VR) : '') + vibTable(m.vib) + '<div class="figs"></div>', [f(Fg.vibSpectrum), f(Fg.vibLevel), f(Fg.hover)]);
+    add('PID & Filter', R.length ? 'hint' : 'ok', "<p class='small'>Basierend auf den gemessenen Werten dieses Fluges. Immer nur einen Parameter pro Flug aendern.</p>" + pidHtml(R));
+    add('Einstellungen', 'none', '<h3>Einstellungen aus dem Log</h3>' + settingsTable(m.hdr || {}) + '<h3>Alle Kennzahlen</h3>' + detailTable(m));
+    return tabs;
+  }
+
+  var DATA = null, CUR = 0, TAB = 0, TABS = null, ROTOR = window.__ROTOR__ || '', worker = null;
+  function msg(t, err, spin) { $('hero').innerHTML = ''; $('body').innerHTML = '<div id="msg" class="' + (err ? 'err' : '') + '">' + (spin ? ROTOR : '') + t + '</div>'; $('tabs').innerHTML = ''; }
+  function render() {
+    var it = DATA[CUR]; TABS = buildTabs(it); if (TAB >= TABS.length) TAB = 0;
+    $('tabs').innerHTML = TABS.map(function (x, i) { return '<button data-i="' + i + '" class="' + (i === TAB ? 'on' : '') + '"><i class="' + x.sev + '"></i>' + esc(x.title) + '</button>'; }).join('');
+    $('hero').innerHTML = '<h2>' + esc(it.name) + '</h2><span class="badge b-' + (TABS[0].sev) + '">' + (SL[TABS[0].sev] || '') + '</span>';
+    var t = TABS[TAB]; $('body').innerHTML = t.html;
+    var box = $('body').querySelector('.figs');
+    if (box) t.figs.forEach(function (fn) { try { fn(box); } catch (e) { var d = document.createElement('div'); d.className = 'small'; d.textContent = 'Diagramm uebersprungen (' + e.message + ')'; box.appendChild(d); console.error(e); } });
+    window.scrollTo(0, 0);
+  }
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; TAB = +b.dataset.i; render(); });
+  window.addEventListener('resize', function () { clearTimeout(window.__rz); window.__rz = setTimeout(function () { if (DATA) render(); }, 250); });
+
+  function analyze(file) {
+    $('fname').textContent = file.name;
+    msg('Lese ' + esc(file.name) + ' ...', 0, 1);
+    var rd = new FileReader();
+    rd.onerror = function () { msg('Datei konnte nicht gelesen werden.', 1); };
+    rd.onload = function () {
+      msg('Dekodiere und analysiere ' + esc(file.name) + ' &ndash; das dauert je nach Loggroesse einige Sekunden ...', 0, 1);
+      if (worker) worker.terminate();
+      worker = new Worker(window.__WORKER_URL__);
+      worker.onmessage = function (e) {
+        var d = e.data;
+        if (d.progress) { var s = document.querySelector('#msg'); if (s) s.lastChild.textContent = d.progress; return; }
+        worker.terminate(); worker = null;
+        if (d.error) { msg(esc(d.error), 1); return; }
+        DATA = d.done; CUR = 0; TAB = 0;
+        var s = $('flight'); s.innerHTML = DATA.map(function (x, i) { return '<option value="' + i + '">' + esc(x.name) + '</option>'; }).join('');
+        s.style.display = DATA.length > 1 ? '' : 'none'; render();
+      };
+      worker.onerror = function (e) { msg('Fehler: ' + esc(e.message || e), 1); };
+      worker.postMessage({ buf: rd.result, name: file.name, cells: +$('cells').value || 0 }, [rd.result]);
+    };
+    rd.readAsArrayBuffer(file);
+  }
+  $('file').onchange = function () { if (this.files[0]) analyze(this.files[0]); };
+  $('flight').onchange = function () { CUR = +this.value; TAB = 0; render(); };
+  $('cells').onchange = function () { var f = $('file').files[0]; if (f && DATA) analyze(f); };
+  window.__rf = { analyze: analyze };
+})();
+
+</script></body></html>

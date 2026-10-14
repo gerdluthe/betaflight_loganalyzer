@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+dist_index.html
+node_modules/
+bf_tauri/src-tauri/target/
+bf_tauri/src-tauri/gen/
+*.png
+!bf_tauri/icon.png
