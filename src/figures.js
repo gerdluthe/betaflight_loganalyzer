@@ -6,12 +6,12 @@
   var CAP = {
     overview: 'Oben Gasstick (grau gestrichelt) und mittlerer Motor-Ausgang (blau), darunter Strom/Spannung und wie viel du an den Sticks gemacht hast. Gelb hinterlegt = ausgewertete Flugphase.',
     step: 'Sprungantwort je Achse: so reagiert der Copter auf einen ploetzlichen Stick-Sprung (berechnet aus dem ganzen Flug). Ideal: schneller Anstieg auf 1,0 mit hoechstens 5-10 % Ueberschwingen und ohne Nachschwingen. Gestrichelt: nur grosse Ausschlaege (ueber 500 deg/s).',
-    tracking: 'Soll-Drehrate (orange, aus den Sticks) und tatsaechliche Drehrate (blau, Gyro) ueber den ganzen Flug. Liegen beide aufeinander, folgt der Copter den Sticks genau.',
+    tracking: 'Soll-Drehrate (gelb, aus den Sticks) und tatsaechliche Drehrate (blau, Gyro) ueber den ganzen Flug. Liegen beide aufeinander, folgt der Copter den Sticks genau.',
     spectro: 'Zeit nach rechts, Frequenz nach oben, hell = starke Schwingung (gefiltertes Gyro). Waagrechte helle Linien sind feste Resonanzen; Linien, die mit dem Gas (unten) steigen und fallen, kommen von Motoren/Propellern. Senkrechte Streifen sind Manoever.',
     propwash: 'Links jede schnelle Gas-Ruecknahme als Punkt: wie stark Roll/Nick danach geschuettelt haben (Regelabweichung 10-90 Hz). Grau: Pegel im ruhigen Flug. Rechts das staerkste Ereignis im Detail mit Gas (grau).',
     motors: 'Ausgang aller Motoren ueber den Flug (0 % = Leerlauf, 100 % = Vollgas). Flache Spitzen an der roten Linie = Motor am Anschlag. Rechts der mittlere Ausgang je Motor bei ruhigen Sticks - ungleiche Balken zeigen Schwerpunkt- oder Propellerprobleme.',
     rpm: 'Mittlere Motordrehzahl (aus bidirektionalem DShot) als Frequenz. Das ist die Grundfrequenz, auf der Propeller-Unwucht und Motorrauschen liegen.',
-    vib: 'Vibrations-Spektrum je Achse ueber den ganzen Flug. Orange = vor den Filtern, blau = nach den Filtern. Rote Linie: Gyro-Tiefpass 1, gelb: Bereich des dynamischen Notch, violett: mittlere Motorfrequenz (falls geloggt). Je weiter blau unter orange, desto besser filtern die Filter.',
+    vib: 'Vibrations-Spektrum je Achse ueber den ganzen Flug. Gelb = vor den Filtern, blau = nach den Filtern. Rote Linie: Gyro-Tiefpass 1, hell hinterlegt: Bereich des dynamischen Notch, violett: mittlere Motorfrequenz (falls geloggt). je weiter blau unter gelb, desto besser filtern die Filter.',
     thrmap: 'Frequenz ueber Gas: jede Spalte ist ein Gasbereich, hell = starke Vibration. Schraege helle Baender, die mit dem Gas steigen = Motorrauschen (Fall fuer den RPM-Filter); waagrechte Baender = feste Resonanz (Rahmen, Notch). Punkte: gemessene Motorfrequenz.',
     viblevel: 'Vibrationspegel (Effektivwert oberhalb 20 Hz) ueber den Flug, vor und nach den Filtern, dazu der Gasstick. Ein Pegel, der mit dem Gas steigt, ist normal; dauerhaft hohe blaue Werte sind Restvibration.',
     dterm: 'Spektrum des D-Terms (Roll/Nick). Der D-Term verstaerkt hochfrequentes Rauschen; was hier rechts noch hoch ist, landet in den Motoren und macht sie warm.',
@@ -22,7 +22,7 @@
   function U() { return (root.RFA || require('./analysis.js')).util; }
 
   function overview(el, m, P) {
-    var t = P.t, xl = [t[0], t[t.length - 1]], spans = [{ x0: m.t0, x1: m.t1, color: 'rgba(251,191,36,.10)' }];
+    var t = P.t, xl = [t[0], t[t.length - 1]], spans = [{ x0: m.t0, x1: m.t1, color: 'rgba(255,187,0,.05)' }];
     var base = { xlim: xl, spans: spans, xticks: false };
     function P1(o) { return Object.assign({}, base, o); }
     var rows = [{ h: 160, panels: [P1({ title: 'Flug auf einen Blick', ylabel: 'Gas / Motoren [%]', ylim: [0, 105], series: [{ x: t, y: P.mavg, color: C.blue, label: 'Motoren (Mittel)', width: .9 }, { x: t, y: P.thr, color: C.grey, dash: 'dash', label: 'Gasstick', width: .9 }], legend: 'left' })] }];
@@ -37,7 +37,7 @@
       var x = Float64Array.from(a.step, function (_, i) { return i / S.fs * 1000; }), ser = [{ x: x, y: a.step, color: AXC[k], width: 2, label: 'alle Bewegungen' }];
       if (a.high) ser.push({ x: x, y: a.high, color: C.orange, width: 1.2, dash: 'dash', label: 'nur grosse' });
       panels.push({ title: AXN[k] + ' - Ueberschwingen ' + Math.max(0, a.over).toFixed(0) + ' %, 50 % nach ' + a.t50.toFixed(0) + ' ms', xlabel: 'Zeit nach dem Sprung [ms]', ylabel: k === 0 ? 'Antwort (1 = Soll)' : null, xlim: [0, 500], ylim: [0, Math.max(1.6, Math.min(2.2, a.peak * 1.1))], series: ser,
-        hlines: [{ y: 1, color: '#d5dcee', dash: '' }, { y: 1.1, color: 'rgba(251,191,36,.6)' }], legend: k === 0 && a.high ? 'bottom' : false });
+        hlines: [{ y: 1, color: '#e2e2e2', dash: '' }, { y: 1.1, color: 'rgba(255,187,0,.6)' }], legend: k === 0 && a.high ? 'bottom' : false });
     });
     Ch.figure(el, { caption: CAP.step, rows: [{ h: 240, panels: panels }] });
   }
@@ -85,8 +85,8 @@
       ser.push({ x: fx, y: Float64Array.from(x, function (_, i) { return Math.sqrt(V.psdA[k][i + 1]); }), color: C.blue, width: 1.3, label: k === 0 ? 'nach den Filtern' : null });
       var vl = [];
       if (V.lp_on) vl.push({ x: S.lpf1_eff, color: C.red, dash: 'dash', label: 'Tiefpass 1', row: 0 });
-      if (hz === hz) for (var q = 1; q <= 3 && q * hz < V.nyq; q++) vl.push({ x: q * hz, color: 'rgba(167,139,250,.7)', dash: 'dot', label: q === 1 ? 'Motor' : q + 'x', row: 1 });
-      var sp = (S.dn_count > 0 && S.dn_max > S.dn_min) ? [{ x0: S.dn_min, x1: Math.min(S.dn_max, V.nyq), color: 'rgba(251,191,36,.08)' }] : [];
+      if (hz === hz) for (var q = 1; q <= 3 && q * hz < V.nyq; q++) vl.push({ x: q * hz, color: 'rgba(192,140,255,.7)', dash: 'dot', label: q === 1 ? 'Motor' : q + 'x', row: 1 });
+      var sp = (S.dn_count > 0 && S.dn_max > S.dn_min) ? [{ x0: S.dn_min, x1: Math.min(S.dn_max, V.nyq), color: 'rgba(255,187,0,.08)' }] : [];
       rows.push({ h: 170, panels: [{ title: k === 0 ? 'Vibrations-Spektrum (Amplitude, log)' : null, ylabel: AXN[k] + ' [deg/s/√Hz]', xlabel: k === 2 ? 'Frequenz [Hz]' : null, xticks: k === 2, ylog: true, ylim: [1e-3, 1e2], xlim: [0, V.nyq], series: ser, vlines: vl, spans: sp, legend: k === 0 ? 'left' : false }] });
     }
     Ch.figure(el, { caption: CAP.vib, rows: rows });
@@ -125,7 +125,7 @@
     for (var j = 0; j < H.axes[0].length; j++) { var f = j * H.df; if (f > 1 && f < 80) x.push(j); }
     var fx = Float64Array.from(x, function (j) { return j * H.df; }), ser = [];
     AXN.forEach(function (a, i) { ser.push({ x: fx, y: Float64Array.from(x, function (j) { return H.axes[i][j]; }), color: AXC[i], label: a, width: 1.4 }); });
-    Ch.figure(el, { caption: CAP.hover, rows: [{ h: 230, panels: [{ title: 'Gyro-Spektrum bei ruhigen Sticks (' + m.hover_n + ' Fenster)', xlabel: 'Hz', ylabel: 'deg/s', ylog: true, series: ser, spans: [{ x0: 2, x1: 8, color: 'rgba(251,191,36,.18)' }],
+    Ch.figure(el, { caption: CAP.hover, rows: [{ h: 230, panels: [{ title: 'Gyro-Spektrum bei ruhigen Sticks (' + m.hover_n + ' Fenster)', xlabel: 'Hz', ylabel: 'deg/s', ylog: true, series: ser, spans: [{ x0: 2, x1: 8, color: 'rgba(255,187,0,.08)' }],
       vlines: m.hover_peaks.slice(0, 3).map(function (p, i) { return { x: p[1], color: C.red, dash: 'dash', label: p[0] + ' ' + p[1].toFixed(1) + ' Hz', row: i }; }), xlim: [1, 80] }] }] });
   }
   function battery(el, m, P) {

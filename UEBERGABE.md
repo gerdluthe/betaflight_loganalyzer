@@ -1,4 +1,4 @@
-# Betaflight Log Analyzer - Uebergabe (Stand v1.7.0)
+# Betaflight Log Analyzer - Uebergabe (Stand v1.8.0)
 Offline-Auswertung von Betaflight-Blackbox-Logs (.bbl/.bfl) als einzelne HTML-Datei; Apps fuer Windows/macOS (Tauri 2) und Android (Capacitor).
 Hervorgegangen aus dem Rotorflight Log Analyzer v1.5.1; ab v1.6.0 komplett auf Betaflight (Multicopter) umgestellt.
 
@@ -21,6 +21,7 @@ Hervorgegangen aus dem Rotorflight Log Analyzer v1.5.1; ab v1.6.0 komplett auf B
 - Release: Tag vX.Y.Z pushen (GitHub Actions in bf_tauri/.github).
 
 ## Aenderungen
+- v1.8.0: Optik an den Betaflight Configurator angelehnt (Graphit, Betaflight-Gelb, Seitenleiste, Kaesten mit Titelleiste), gelbes Logo/Icon.
 - v1.7.0: Abgebrochene Aufzeichnungen erkennen (keine Ende-Markierung, Rest der Datei leer) und erklaeren; kurze Fluege (1-10 s) eingeschraenkt auswerten statt abweisen; neue Versionsnummern (Betaflight 2026.x, d_max, motor_idle) getestet.
 
 ## Getestete Logs

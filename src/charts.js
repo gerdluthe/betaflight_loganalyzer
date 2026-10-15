@@ -1,9 +1,9 @@
 /* Kleine Canvas-Diagramm-Bibliothek (dunkles Theme, Touch-tauglich). Keine Abhaengigkeiten. */
 (function (root) {
   'use strict';
-  var TH = { bg: '#0e1424', panel: '#121a2e', grid: 'rgba(159,176,216,.14)', axis: '#2a3552', text: '#d5dcee', mut: '#8d98b3' };
-  var C = { blue: '#60a5fa', orange: '#fb923c', green: '#34d399', red: '#f87171', grey: '#94a3b8', purple: '#a78bfa', yellow: '#fbbf24' };
-  var FONT = '11px Inter,"Segoe UI",system-ui,sans-serif';
+  var TH = { bg: '#2f2f2f', panel: '#262626', grid: 'rgba(255,255,255,.08)', axis: '#4a4a4a', text: '#e2e2e2', mut: '#a3a3a3' };
+  var C = { blue: '#4ea8de', orange: '#ffbb00', green: '#78c841', red: '#ff4d5e', grey: '#a3a3a3', purple: '#c08cff', yellow: '#ffd75e' };
+  var FONT = '11px "Open Sans","Segoe UI",Roboto,Arial,sans-serif';
 
   function niceStep(range, n) {
     var raw = range / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
@@ -93,11 +93,11 @@
     (o.hlines || []).forEach(function (h) { ctx.strokeStyle = h.color || TH.text; ctx.lineWidth = 1; dash(ctx, h.dash || 'dash'); var yy4 = h.right ? Yr(h.y) : Yl(h.y); ctx.beginPath(); ctx.moveTo(px, yy4); ctx.lineTo(px + pw, yy4); ctx.stroke(); });
     (o.vlines || []).forEach(function (v) { ctx.strokeStyle = v.color || TH.text; ctx.lineWidth = 1.1; dash(ctx, v.dash || 'dot'); var xx = X(v.x); ctx.beginPath(); ctx.moveTo(xx, py); ctx.lineTo(xx, py + ph); ctx.stroke(); });
     ctx.restore(); dash(ctx, '');
-    (o.vlines || []).forEach(function (v) { if (!v.label) return; ctx.fillStyle = v.color || TH.text; ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, Math.min(X(v.x) + 3, px + pw - 60), py + 3 + (v.row || 0) * 12); });
+    (o.vlines || []).forEach(function (v) { if (!v.label) return; ctx.fillStyle = v.color || TH.text; ctx.font = '10px "Open Sans","Segoe UI",Arial,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, Math.min(X(v.x) + 3, px + pw - 60), py + 3 + (v.row || 0) * 12); });
     // Rahmen + Beschriftung
     ctx.strokeStyle = TH.axis; ctx.strokeRect(px + .5, py + .5, pw, ph);
     ctx.font = FONT; ctx.fillStyle = TH.text;
-    if (o.title) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = '600 12px Inter,sans-serif'; ctx.fillText(o.title, px + pw / 2, box.y + 15); ctx.font = FONT; }
+    if (o.title) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = '600 12px "Open Sans","Segoe UI",Arial,sans-serif'; ctx.fillText(o.title, px + pw / 2, box.y + 15); ctx.font = FONT; }
     ctx.fillStyle = TH.mut;
     if (o.ylabel) { ctx.save(); ctx.translate(box.x + 11, py + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.ylabel, 0, 0); ctx.restore(); }
     if (o.y2label && yr) { ctx.save(); ctx.translate(box.x + box.w - 8, py + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.y2label, 0, 0); ctx.restore(); }
@@ -107,7 +107,7 @@
     if (lg.length && o.legend !== false) {
       var lw = 0; lg.forEach(function (s) { lw = Math.max(lw, ctx.measureText(s.label).width); }); lw += 30; var lh = lg.length * 14 + 6;
       var lx = o.legend === 'left' ? px + 6 : px + pw - lw - 6, ly = o.legend === 'bottom' ? py + ph - lh - 4 : py + 5;
-      ctx.fillStyle = 'rgba(14,20,36,.78)'; ctx.fillRect(lx, ly, lw, lh);
+      ctx.fillStyle = 'rgba(38,38,38,.88)'; ctx.fillRect(lx, ly, lw, lh);
       lg.forEach(function (s, i) { var yy5 = ly + 10 + i * 14; ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = 2; dash(ctx, s.dash); ctx.beginPath(); ctx.moveTo(lx + 6, yy5); ctx.lineTo(lx + 22, yy5); ctx.stroke(); dash(ctx, ''); ctx.fillStyle = TH.text; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(s.label, lx + 26, yy5); });
     }
     ctx.restore();
@@ -130,7 +130,7 @@
       var W = Math.max(280, wrap.clientWidth - 24), rows = layout(W), H = rows.reduce(function (a, r) { return a + r.h; }, 0) + (spec.title ? 26 : 0), dpr = window.devicePixelRatio || 1;
       cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = TH.bg; ctx.fillRect(0, 0, W, H);
-      var y = 0; if (spec.title) { ctx.fillStyle = TH.text; ctx.font = '600 13px Inter,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(spec.title, W / 2, 17); y = 26; }
+      var y = 0; if (spec.title) { ctx.fillStyle = TH.text; ctx.font = '600 13px "Open Sans","Segoe UI",Arial,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(spec.title, W / 2, 17); y = 26; }
       rows.forEach(function (r) {
         var tot = r.widths ? r.widths.reduce(function (a, b) { return a + b; }, 0) : r.panels.length, x = 0;
         r.panels.forEach(function (p, i) { var w = W * (r.widths ? r.widths[i] : 1) / tot; panel(ctx, { x: x, y: y, w: w, h: r.h }, p); x += w; });
@@ -145,7 +145,7 @@
   function hist(vals, lo, hi, bins) { var cnt = new Float64Array(bins), cx = new Float64Array(bins), w = (hi - lo) / bins; for (var i = 0; i < bins; i++) cx[i] = lo + (i + .5) * w; for (var j = 0; j < vals.length; j++) { var v = vals[j]; if (v !== v) continue; v = Math.min(hi - 1e-9, Math.max(lo, v)); cnt[Math.floor((v - lo) / w)]++; } return { x: cx, y: cnt, w: w }; }
   // ---- Colormaps (Spektrogramm) ----
   var MAGMA = ['#000004', '#140e36', '#3b0f70', '#641a80', '#8c2981', '#b73779', '#de4968', '#f7705c', '#fe9f6d', '#fecf92', '#fcfdbf'];
-  var REDS = ['#0e1424', '#3d1a26', '#7a1d2a', '#b01e28', '#e0332c', '#ff6b5e', '#ffb3a7'];
+  var REDS = ['#262626', '#3d1a26', '#7a1d2a', '#b01e28', '#e0332c', '#ff6b5e', '#ffb3a7'];
   function hex(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
   function cmap(stops, t) { t = Math.min(1, Math.max(0, t)); var x = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i, a = hex(stops[i]), b = hex(stops[i + 1]); return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; }
   function heat(data, nx, ny, vmin, vmax, stops) { // data[x*ny + y]; y=0 unten
