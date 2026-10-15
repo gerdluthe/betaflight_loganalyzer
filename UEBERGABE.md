@@ -18,7 +18,7 @@ Hervorgegangen aus dem Rotorflight Log Analyzer v1.5.1; ab v1.6.0 komplett auf B
 - python3 build.py -> dist_index.html, kopiert nach bf_tauri/www/index.html und setzt die Version in package.json, tauri.conf.json, Cargo.toml, android-app/package.json. Nur Python-Standardbibliothek.
 - Versionsregel: jede Aenderung -> naechste Minor (1.7.0, 1.8.0 ...), nur VERSION oben in build.py aendern.
 - Tests: shot.py <log> <breite> <tag> (Playwright-Screenshots je Reiter nach shots/).
-- Release: Tag vX.Y.Z pushen (GitHub Actions in bf_tauri/.github).
+- GitHub: ganzes Projekt als ein Repo; Workflow .github/workflows/build.yml (Hauptordner) baut Windows/macOS/Android aus bf_tauri/. Release: Tag vX.Y.Z pushen.
 
 ## Aenderungen
 - v1.8.0: Optik an den Betaflight Configurator angelehnt (Graphit, Betaflight-Gelb, Seitenleiste, Kaesten mit Titelleiste), gelbes Logo/Icon.

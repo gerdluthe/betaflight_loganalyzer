@@ -2,7 +2,7 @@ Betaflight Log Analyzer - Windows + macOS (Tauri 2) + Android (Capacitor)
 ====================================================
 Eigenstaendige App ohne Server, Python oder Decoder: die Auswertung laeuft komplett in der App (WebView2 unter Windows, WebKit unter macOS).
 
-Bauen ueber GitHub: Inhalt dieses Ordners per git pushen (der versteckte Ordner .github muss mit).
+Bauen ueber GitHub: das ganze Projekt pushen; der Workflow liegt im Hauptordner unter .github/workflows/build.yml und baut aus diesem Ordner (bf_tauri).
  - Jeder Push auf main baut beide Systeme (Actions > "Build Windows + macOS", Artifacts).
  - Ein Release entsteht beim Setzen eines Tags:   git tag v1.6.0 ; git push origin v1.6.0
    Dateien im Release: BFLogAnalyzer-portable.exe, BFLogAnalyzer-Setup.exe (Windows), BFLogAnalyzer-macOS.dmg (Mac), BFLogAnalyzer.apk (Android)
