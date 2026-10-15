@@ -45,7 +45,7 @@
   function kpis(m) {
     var mo = m.mot, st = m.step && m.step.ok ? m.step.ax.filter(function (x) { return x.ok; }) : [], over = st.length ? Math.max.apply(null, st.map(function (x) { return x.over; })) : NaN;
     var items = [
-      ['Flugzeit', m.flight_s.toFixed(0) + ' s', m.fw.str || 'Firmware unbekannt'],
+      ['Flugzeit', m.flight_s.toFixed(m.flight_s < 10 ? 1 : 0) + ' s', m.fw.str || 'Firmware unbekannt'],
       m.hasVolt ? ['Min. Spannung', m.v_min.toFixed(1) + ' V', m.v_min_cell.toFixed(2) + ' V/Zelle &middot; ' + m.cells + 'S'] : ['Min. Spannung', '&ndash;', 'nicht geloggt'],
       m.hasCurr ? ['Verbrauch', m.mah.toFixed(0) + ' mAh', m.wh.toFixed(1) + ' Wh'] : ['Verbrauch', '&ndash;', 'kein Strom geloggt'],
       m.hasCurr ? ['Spitzenstrom', m.i_peak.toFixed(0) + ' A', m.p_peak.toFixed(0) + ' W Spitze'] : ['Spitzenstrom', '&ndash;', 'kein Strom geloggt'],
@@ -66,7 +66,7 @@
       'rates_type', 'rc_rates', 'rc_expo', 'rates', 'rcRate', 'rcExpo',
       'gyro_lpf1_static_hz', 'gyro_lpf1_dyn_hz', 'gyro_lpf2_static_hz', 'gyro_lowpass_hz', 'gyro_lowpass_dyn_hz', 'gyro_lowpass2_hz', 'gyro_notch_hz', 'dterm_lpf1_static_hz', 'dterm_lpf1_dyn_hz', 'dterm_lpf2_static_hz', 'dterm_lowpass_hz', 'dterm_lowpass_dyn_hz', 'dterm_lowpass2_hz',
       'dyn_notch_count', 'dyn_notch_q', 'dyn_notch_min_hz', 'dyn_notch_max_hz', 'dyn_notch_width_percent', 'rpm_filter_harmonics', 'rpm_filter_q', 'rpm_filter_min_hz', 'gyro_rpm_notch_harmonics', 'gyro_rpm_notch_q', 'gyro_rpm_notch_min',
-      'motor_pwm_protocol', 'dshot_bidir', 'motor_poles', 'dshot_idle_value', 'dyn_idle_min_rpm', 'motorOutput', 'debug_mode'];
+      'motor_pwm_protocol', 'dshot_bidir', 'motor_poles', 'dshot_idle_value', 'motor_idle', 'dyn_idle_min_rpm', 'motorOutput', 'debug_mode'];
     var rows = keys.filter(function (k) { return k in h; }).map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + esc(h[k]) + '</td></tr>'; }).join('');
     return '<table>' + rows + '</table><div class="small">PID-Werte je Achse: P, I, D (bei Betaflight 4.x ist D der Hoechstwert, d_min der Grundwert). Feedforward und d_min: Roll, Nick, Gier.</div>';
   }

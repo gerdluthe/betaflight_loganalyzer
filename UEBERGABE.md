@@ -1,4 +1,4 @@
-# Betaflight Log Analyzer - Uebergabe (Stand v1.6.0)
+# Betaflight Log Analyzer - Uebergabe (Stand v1.7.0)
 Offline-Auswertung von Betaflight-Blackbox-Logs (.bbl/.bfl) als einzelne HTML-Datei; Apps fuer Windows/macOS (Tauri 2) und Android (Capacitor).
 Hervorgegangen aus dem Rotorflight Log Analyzer v1.5.1; ab v1.6.0 komplett auf Betaflight (Multicopter) umgestellt.
 
@@ -20,8 +20,11 @@ Hervorgegangen aus dem Rotorflight Log Analyzer v1.5.1; ab v1.6.0 komplett auf B
 - Tests: shot.py <log> <breite> <tag> (Playwright-Screenshots je Reiter nach shots/).
 - Release: Tag vX.Y.Z pushen (GitHub Actions in bf_tauri/.github).
 
+## Aenderungen
+- v1.7.0: Abgebrochene Aufzeichnungen erkennen (keine Ende-Markierung, Rest der Datei leer) und erklaeren; kurze Fluege (1-10 s) eingeschraenkt auswerten statt abweisen; neue Versionsnummern (Betaflight 2026.x, d_max, motor_idle) getestet.
+
 ## Getestete Logs
-Betaflight 3.1.5, 4.2.0-4.2.11, 4.3.0 (1 kHz, 500 Hz, 250 Hz, 8 kHz). INAV/Rotorflight werden erkannt und abgewiesen bzw. als "kein Flug" gemeldet.
+Betaflight 3.1.5, 4.2.0-4.2.11, 4.3.0, 2026.6.2 (gyroUnfilt im Log, 2 kHz) (1 kHz, 500 Hz, 250 Hz, 8 kHz). INAV/Rotorflight werden erkannt und abgewiesen bzw. als "kein Flug" gemeldet.
 Noch ohne echtes Test-Log: BF 4.4-4.6 mit gyroUnfilt/eRPM-Feldern (nach Doku implementiert), d_max-Benennung ab 4.6.
 
 ## Offene Ideen

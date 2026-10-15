@@ -4,7 +4,8 @@
   'use strict';
   var THRESH = {
     fly_motor_pct: 8,            // Mittel der Motoren ueber Leerlauf [%], ab dem "in der Luft" angenommen wird
-    min_flight_s: 10,            // kuerzeste sinnvolle Flugphase
+    min_flight_s: 10,            // ab hier volle Analyse; darunter eingeschraenkt
+    min_flight_short_s: 1,       // kuerzeste Flugphase ueberhaupt
     vcell_load_hint: 3.5, vcell_load_warn: 3.3, vcell_rest_low: 3.70,
     sat_pct_hint: 1.0, sat_pct_warn: 5.0,             // Anteil der Flugzeit mit einem Motor am oberen Anschlag
     idle_pct_hint: 2.0,                               // Anteil mit einem Motor am Leerlauf trotz Gas
@@ -245,7 +246,8 @@
     var best = segs[0]; segs.forEach(function (sg) { if (t[sg[1]] - t[sg[0]] > t[best[1]] - t[best[0]]) best = sg; });
     var i0 = best[0], i1 = best[1] + 1;
     m.n_segments = segs.length;
-    if (t[i1 - 1] - t[i0] < THRESH.min_flight_s) { m.error = 'Flugphase kuerzer als ' + THRESH.min_flight_s + ' s - zu kurz fuer eine sinnvolle Analyse.'; return m; }
+    if (t[i1 - 1] - t[i0] < THRESH.min_flight_short_s) { m.error = 'Flugphase nur ' + (t[i1 - 1] - t[i0]).toFixed(1) + ' s lang - zu kurz fuer eine Analyse.'; return m; }
+    m.short = t[i1 - 1] - t[i0] < THRESH.min_flight_s;
     m.ok = true; m.t0 = t[i0]; m.t1 = t[i1 - 1]; m.i0 = i0; m.i1 = i1;
     var fl = df.slice(i0, i1); m.fl = fl; fl.t = fl.cols.t; var flt = fl.t;
     m.flight_s = flt[fl.n - 1] - flt[0];

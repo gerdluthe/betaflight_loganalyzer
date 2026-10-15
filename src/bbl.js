@@ -93,7 +93,7 @@
     var hist = [new Float64Array(nMain), new Float64Array(nMain), new Float64Array(nMain)];
     var cur = hist[0], prev = null, prev2 = null, ring = 0;
     var lastSlow = new Float64Array(Math.max(nSlow, 1)), lastIter = -1, lastTime = -1, rollover = 0;
-    var mainValid = false, lastSkipped = 0, ev = -1, gpsHome = [0, 0];
+    var mainValid = false, lastSkipped = 0, ev = -1, gpsHome = [0, 0], sawEnd = false, lastGood = pos;
     function should(fi) { return (((fi % cfg.frameIntervalI) + cfg.pNum - 1) % cfg.pDen) < cfg.pNum; }
     function skippedFrames() { if (lastIter === -1) return 0; var c = 0; for (var fi = lastIter + 1; !should(fi); fi++) c++; return c; }
     function predict(i, pr, value, frame) {
@@ -160,7 +160,7 @@
           if (et === 0) uvb(); else if (et === 13) { var f = rb(); if (f > 127) { p += 4; } else svb(); }
           else if (et === 15) uvb(); else if (et === 30) { uvb(); uvb(); }
           else if (et === 14) { var li = uvb(), ct = uvb() + rollover; ev = { resume: [li, ct] }; }
-          else if (et === 255) { if (p + 11 <= end) { var s = ''; for (var z = 0; z < 11; z++) s += String.fromCharCode(data[p + z]); p += 11; if (s === 'End of log\0') end = p; else ev = -1; } else { p = end; } }
+          else if (et === 255) { if (p + 11 <= end) { var s = ''; for (var z = 0; z < 11; z++) s += String.fromCharCode(data[p + z]); p += 11; if (s === 'End of log\0') { end = p; sawEnd = true; } else ev = -1; } else { p = end; } }
           else ev = -1;
         }
       } catch (err) { if (/nicht unterstuetzt/.test(err.message)) throw err; ok = false; }
@@ -170,14 +170,16 @@
       if (t === 'I') {
         rolloverFix();
         if (lastIter !== -1 && !validate()) invalidate(); else mainValid = true;
-        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(true); }
+        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(true); lastGood = p; }
       } else if (t === 'P') {
         rolloverFix();
         if (mainValid && !validate()) invalidate();
-        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(false); }
+        if (mainValid) { lastIter = cur[iIter]; lastTime = cur[iTime]; pushRow(cur, lastSlow); rotate(false); lastGood = p; }
       } else if (t === 'E' && ev && ev.resume) { lastIter = ev.resume[0]; lastTime = ev.resume[1]; }
     }
-    var out = { header: hdr, names: allNames, n: nrows, cols: {}, nMain: nMain };
+    // Ende pruefen: ordentlich geschlossen ("End of log") oder abgebrochen (Rest leer: 0xFF/0x00 = geloeschter Speicher)
+    var tail = end - lastGood, blank = 0; for (var bi = lastGood; bi < end; bi++) if (data[bi] === 0xff || data[bi] === 0) blank++;
+    var out = { header: hdr, names: allNames, n: nrows, cols: {}, nMain: nMain, endMarker: sawEnd, dataBytes: lastGood - start, tailBytes: tail, tailBlank: tail > 0 ? blank / tail : 0, fileBytes: data.length };
     for (var q = 0; q < ncol; q++) out.cols[allNames[q]] = cols[q].subarray(0, nrows);
     return out;
   }

@@ -1,6 +1,6 @@
 {
   "name": "betaflight-log-analyzer",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "dependencies": {
     "@capacitor/android": "6.1.2",
